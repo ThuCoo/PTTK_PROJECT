@@ -13,6 +13,22 @@ CREATE TABLE IF NOT EXISTS users (
   email          VARCHAR(100),
   created_at     TIMESTAMP DEFAULT NOW()
 );
+INSERT INTO users (username, password_hash, ho_ten, role, email)
+VALUES
+(
+  'admin',
+  '$2b$10$mkjNkaCnKrBISTlS5hIIGub8nBGPgL/DCdNjVcfxaR8O9AKi044Ki',
+  'Admin',
+  'quan_ly',
+  'admin@gmail.com'
+),
+(
+  'nhanvien',
+  '$2b$10$mkjNkaCnKrBISTlS5hIIGub8nBGPgL/DCdNjVcfxaR8O9AKi044Ki',
+  'Nhan Vien',
+  'nhan_vien',
+  'nv@gmail.com'
+);
 -- =========================================================================
 -- 1. TẠO CÁC BẢNG DANH MỤC & THỰC THỂ ĐỘC LẬP
 -- =========================================================================
@@ -133,6 +149,7 @@ CREATE TABLE PhieuDangKy (
     KhuVucMongMuon VARCHAR(100),
     MaKhachHang VARCHAR(50), -- Đại diện
     MaNVSale VARCHAR(50),
+    LoaiPhong VARCHAR(100),
     FOREIGN KEY (MaKhachHang) REFERENCES KhachHang(MaKhachHang),
     FOREIGN KEY (MaNVSale) REFERENCES NV_Sale(MaNhanVien)
 );

@@ -24,9 +24,19 @@ router.get('/stats', async (_req: Request, res: Response) => {
   }
 });
 
+router.get('/phu-hop/:maPhieuDK', async (req: Request, res: Response) => {
+  try {
+    const { maPhieuDK } = req.params;
+    const data = await PhongBUS.findPhongPhuHop(maPhieuDK);
+    res.json({ success: true, data });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 router.get('/:id', async (req: Request, res: Response) => {
   try {
-    const data = await PhongBUS.getById(parseInt(req.params.id));
+    const data = await PhongBUS.getById(req.params.id);
     res.json({ success: true, data });
   } catch (err: any) {
     res.status(404).json({ success: false, error: err.message });

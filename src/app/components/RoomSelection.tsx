@@ -1,212 +1,214 @@
 import { useState, useEffect } from 'react';
 import { CheckCircle, Bed, Users, MapPin, DollarSign, X, Home, Info, Trash2 } from 'lucide-react';
+import { phongApi,khachHangApi } from '../../services/api';
+import { useQuery } from '@tanstack/react-query';
 
-const initialRoomsData = [
-  {
-    id: 'P301',
-    name: 'P301',
-    area: 'Khu A',
-    floor: 3,
-    type: 'Phòng 4 người',
-    capacity: 4,
-    occupied: 2,
-    price: 1800000,
-    gender: 'Nam',
-    amenities: ['Điều hòa', 'Tủ lạnh', 'Wifi'],
-    beds: [
-      { id: 1, status: 'Đang sử dụng', occupant: 'Hoàng Văn E' },
-      { id: 2, status: 'Trống', occupant: null },
-      { id: 3, status: 'Đang sử dụng', occupant: 'Phan Văn F' },
-      { id: 4, status: 'Trống', occupant: null },
-    ]
-  },
-  {
-    id: 'P302',
-    name: 'P302',
-    area: 'Khu A',
-    floor: 3,
-    type: 'Phòng 4 người',
-    capacity: 4,
-    occupied: 1,
-    price: 1800000,
-    gender: 'Nam',
-    amenities: ['Điều hòa', 'Wifi'],
-    beds: [
-      { id: 1, status: 'Trống', occupant: null },
-      { id: 2, status: 'Trống', occupant: null },
-      { id: 3, status: 'Đang sử dụng', occupant: 'Ngô Văn G' },
-      { id: 4, status: 'Trống', occupant: null },
-    ]
-  },
-  {
-    id: 'P303',
-    name: 'P303',
-    area: 'Khu A',
-    floor: 3,
-    type: 'Phòng 3 người',
-    capacity: 3,
-    occupied: 0,
-    price: 2000000,
-    gender: 'Nam',
-    amenities: ['Điều hòa', 'Tủ lạnh', 'Wifi'],
-    beds: [
-      { id: 1, status: 'Trống', occupant: null },
-      { id: 2, status: 'Trống', occupant: null },
-      { id: 3, status: 'Trống', occupant: null },
-    ]
-  },
-  {
-    id: 'P405',
-    name: 'P405',
-    area: 'Khu A',
-    floor: 4,
-    type: 'Phòng 5 người',
-    capacity: 5,
-    occupied: 0,
-    price: 1600000,
-    gender: 'Nam',
-    amenities: ['Điều hòa', 'Wifi'],
-    beds: [
-      { id: 1, status: 'Trống', occupant: null },
-      { id: 2, status: 'Trống', occupant: null },
-      { id: 3, status: 'Trống', occupant: null },
-      { id: 4, status: 'Trống', occupant: null },
-      { id: 5, status: 'Trống', occupant: null },
-    ]
-  },
-  {
-    id: 'P412',
-    name: 'P412',
-    area: 'Khu A',
-    floor: 4,
-    type: 'Phòng 6 người',
-    capacity: 6,
-    occupied: 0,
-    price: 1500000,
-    gender: 'Nam',
-    amenities: ['Điều hòa', 'Wifi'],
-    beds: [
-      { id: 1, status: 'Trống', occupant: null },
-      { id: 2, status: 'Trống', occupant: null },
-      { id: 3, status: 'Trống', occupant: null },
-      { id: 4, status: 'Trống', occupant: null },
-      { id: 5, status: 'Trống', occupant: null },
-      { id: 6, status: 'Trống', occupant: null },
-    ]
-  },
-  {
-    id: 'P501',
-    name: 'P501',
-    area: 'Khu A',
-    floor: 5,
-    type: 'Phòng 7 người',
-    capacity: 7,
-    occupied: 0,
-    price: 1400000,
-    gender: 'Nam',
-    amenities: ['Điều hòa', 'Wifi'],
-    beds: [
-      { id: 1, status: 'Trống', occupant: null },
-      { id: 2, status: 'Trống', occupant: null },
-      { id: 3, status: 'Trống', occupant: null },
-      { id: 4, status: 'Trống', occupant: null },
-      { id: 5, status: 'Trống', occupant: null },
-      { id: 6, status: 'Trống', occupant: null },
-      { id: 7, status: 'Trống', occupant: null },
-    ]
-  },
-  {
-    id: 'P205',
-    name: 'P205',
-    area: 'Khu B',
-    floor: 2,
-    type: 'Phòng 2 người',
-    capacity: 2,
-    occupied: 0,
-    price: 2500000,
-    gender: 'Nữ',
-    amenities: ['Điều hòa', 'Tủ lạnh', 'Wifi', 'Máy giặt'],
-    beds: [
-      { id: 1, status: 'Trống', occupant: null },
-      { id: 2, status: 'Trống', occupant: null },
-    ]
-  },
-  {
-    id: 'P206',
-    name: 'P206',
-    area: 'Khu B',
-    floor: 2,
-    type: 'Phòng 4 người',
-    capacity: 4,
-    occupied: 0,
-    price: 2000000,
-    gender: 'Nữ',
-    amenities: ['Điều hòa', 'Wifi'],
-    beds: [
-      { id: 1, status: 'Trống', occupant: null },
-      { id: 2, status: 'Trống', occupant: null },
-      { id: 3, status: 'Trống', occupant: null },
-      { id: 4, status: 'Trống', occupant: null },
-    ]
-  },
-  {
-    id: 'P207',
-    name: 'P207',
-    area: 'Khu B',
-    floor: 2,
-    type: 'Phòng 3 người',
-    capacity: 3,
-    occupied: 0,
-    price: 2200000,
-    gender: 'Nữ',
-    amenities: ['Điều hòa', 'Tủ lạnh', 'Wifi'],
-    beds: [
-      { id: 1, status: 'Trống', occupant: null },
-      { id: 2, status: 'Trống', occupant: null },
-      { id: 3, status: 'Trống', occupant: null },
-    ]
-  },
-  {
-    id: 'P308',
-    name: 'P308',
-    area: 'Khu B',
-    floor: 3,
-    type: 'Phòng 5 người',
-    capacity: 5,
-    occupied: 0,
-    price: 1800000,
-    gender: 'Nữ',
-    amenities: ['Điều hòa', 'Wifi'],
-    beds: [
-      { id: 1, status: 'Trống', occupant: null },
-      { id: 2, status: 'Trống', occupant: null },
-      { id: 3, status: 'Trống', occupant: null },
-      { id: 4, status: 'Trống', occupant: null },
-      { id: 5, status: 'Trống', occupant: null },
-    ]
-  },
-  {
-    id: 'P409',
-    name: 'P409',
-    area: 'Khu B',
-    floor: 4,
-    type: 'Phòng 7 người',
-    capacity: 7,
-    occupied: 0,
-    price: 1600000,
-    gender: 'Nữ',
-    amenities: ['Điều hòa', 'Wifi'],
-    beds: [
-      { id: 1, status: 'Trống', occupant: null },
-      { id: 2, status: 'Trống', occupant: null },
-      { id: 3, status: 'Trống', occupant: null },
-      { id: 4, status: 'Trống', occupant: null },
-      { id: 5, status: 'Trống', occupant: null },
-      { id: 6, status: 'Trống', occupant: null },
-      { id: 7, status: 'Trống', occupant: null },
-    ]
-  },
-];
+// const initialRoomsData = [
+//   {
+//     id: 'P301',
+//     name: 'P301',
+//     area: 'Khu A',
+//     floor: 3,
+//     type: 'Phòng 4 người',
+//     capacity: 4,
+//     occupied: 2,
+//     price: 1800000,
+//     gender: 'Nam',
+//     amenities: ['Điều hòa', 'Tủ lạnh', 'Wifi'],
+//     beds: [
+//       { id: 1, status: 'Đang sử dụng', occupant: 'Hoàng Văn E' },
+//       { id: 2, status: 'Trống', occupant: null },
+//       { id: 3, status: 'Đang sử dụng', occupant: 'Phan Văn F' },
+//       { id: 4, status: 'Trống', occupant: null },
+//     ]
+//   },
+//   {
+//     id: 'P302',
+//     name: 'P302',
+//     area: 'Khu A',
+//     floor: 3,
+//     type: 'Phòng 4 người',
+//     capacity: 4,
+//     occupied: 1,
+//     price: 1800000,
+//     gender: 'Nam',
+//     amenities: ['Điều hòa', 'Wifi'],
+//     beds: [
+//       { id: 1, status: 'Trống', occupant: null },
+//       { id: 2, status: 'Trống', occupant: null },
+//       { id: 3, status: 'Đang sử dụng', occupant: 'Ngô Văn G' },
+//       { id: 4, status: 'Trống', occupant: null },
+//     ]
+//   },
+//   {
+//     id: 'P303',
+//     name: 'P303',
+//     area: 'Khu A',
+//     floor: 3,
+//     type: 'Phòng 3 người',
+//     capacity: 3,
+//     occupied: 0,
+//     price: 2000000,
+//     gender: 'Nam',
+//     amenities: ['Điều hòa', 'Tủ lạnh', 'Wifi'],
+//     beds: [
+//       { id: 1, status: 'Trống', occupant: null },
+//       { id: 2, status: 'Trống', occupant: null },
+//       { id: 3, status: 'Trống', occupant: null },
+//     ]
+//   },
+//   {
+//     id: 'P405',
+//     name: 'P405',
+//     area: 'Khu A',
+//     floor: 4,
+//     type: 'Phòng 5 người',
+//     capacity: 5,
+//     occupied: 0,
+//     price: 1600000,
+//     gender: 'Nam',
+//     amenities: ['Điều hòa', 'Wifi'],
+//     beds: [
+//       { id: 1, status: 'Trống', occupant: null },
+//       { id: 2, status: 'Trống', occupant: null },
+//       { id: 3, status: 'Trống', occupant: null },
+//       { id: 4, status: 'Trống', occupant: null },
+//       { id: 5, status: 'Trống', occupant: null },
+//     ]
+//   },
+//   {
+//     id: 'P412',
+//     name: 'P412',
+//     area: 'Khu A',
+//     floor: 4,
+//     type: 'Phòng 6 người',
+//     capacity: 6,
+//     occupied: 0,
+//     price: 1500000,
+//     gender: 'Nam',
+//     amenities: ['Điều hòa', 'Wifi'],
+//     beds: [
+//       { id: 1, status: 'Trống', occupant: null },
+//       { id: 2, status: 'Trống', occupant: null },
+//       { id: 3, status: 'Trống', occupant: null },
+//       { id: 4, status: 'Trống', occupant: null },
+//       { id: 5, status: 'Trống', occupant: null },
+//       { id: 6, status: 'Trống', occupant: null },
+//     ]
+//   },
+//   {
+//     id: 'P501',
+//     name: 'P501',
+//     area: 'Khu A',
+//     floor: 5,
+//     type: 'Phòng 7 người',
+//     capacity: 7,
+//     occupied: 0,
+//     price: 1400000,
+//     gender: 'Nam',
+//     amenities: ['Điều hòa', 'Wifi'],
+//     beds: [
+//       { id: 1, status: 'Trống', occupant: null },
+//       { id: 2, status: 'Trống', occupant: null },
+//       { id: 3, status: 'Trống', occupant: null },
+//       { id: 4, status: 'Trống', occupant: null },
+//       { id: 5, status: 'Trống', occupant: null },
+//       { id: 6, status: 'Trống', occupant: null },
+//       { id: 7, status: 'Trống', occupant: null },
+//     ]
+//   },
+//   {
+//     id: 'P205',
+//     name: 'P205',
+//     area: 'Khu B',
+//     floor: 2,
+//     type: 'Phòng 2 người',
+//     capacity: 2,
+//     occupied: 0,
+//     price: 2500000,
+//     gender: 'Nữ',
+//     amenities: ['Điều hòa', 'Tủ lạnh', 'Wifi', 'Máy giặt'],
+//     beds: [
+//       { id: 1, status: 'Trống', occupant: null },
+//       { id: 2, status: 'Trống', occupant: null },
+//     ]
+//   },
+//   {
+//     id: 'P206',
+//     name: 'P206',
+//     area: 'Khu B',
+//     floor: 2,
+//     type: 'Phòng 4 người',
+//     capacity: 4,
+//     occupied: 0,
+//     price: 2000000,
+//     gender: 'Nữ',
+//     amenities: ['Điều hòa', 'Wifi'],
+//     beds: [
+//       { id: 1, status: 'Trống', occupant: null },
+//       { id: 2, status: 'Trống', occupant: null },
+//       { id: 3, status: 'Trống', occupant: null },
+//       { id: 4, status: 'Trống', occupant: null },
+//     ]
+//   },
+//   {
+//     id: 'P207',
+//     name: 'P207',
+//     area: 'Khu B',
+//     floor: 2,
+//     type: 'Phòng 3 người',
+//     capacity: 3,
+//     occupied: 0,
+//     price: 2200000,
+//     gender: 'Nữ',
+//     amenities: ['Điều hòa', 'Tủ lạnh', 'Wifi'],
+//     beds: [
+//       { id: 1, status: 'Trống', occupant: null },
+//       { id: 2, status: 'Trống', occupant: null },
+//       { id: 3, status: 'Trống', occupant: null },
+//     ]
+//   },
+//   {
+//     id: 'P308',
+//     name: 'P308',
+//     area: 'Khu B',
+//     floor: 3,
+//     type: 'Phòng 5 người',
+//     capacity: 5,
+//     occupied: 0,
+//     price: 1800000,
+//     gender: 'Nữ',
+//     amenities: ['Điều hòa', 'Wifi'],
+//     beds: [
+//       { id: 1, status: 'Trống', occupant: null },
+//       { id: 2, status: 'Trống', occupant: null },
+//       { id: 3, status: 'Trống', occupant: null },
+//       { id: 4, status: 'Trống', occupant: null },
+//       { id: 5, status: 'Trống', occupant: null },
+//     ]
+//   },
+//   {
+//     id: 'P409',
+//     name: 'P409',
+//     area: 'Khu B',
+//     floor: 4,
+//     type: 'Phòng 7 người',
+//     capacity: 7,
+//     occupied: 0,
+//     price: 1600000,
+//     gender: 'Nữ',
+//     amenities: ['Điều hòa', 'Wifi'],
+//     beds: [
+//       { id: 1, status: 'Trống', occupant: null },
+//       { id: 2, status: 'Trống', occupant: null },
+//       { id: 3, status: 'Trống', occupant: null },
+//       { id: 4, status: 'Trống', occupant: null },
+//       { id: 5, status: 'Trống', occupant: null },
+//       { id: 6, status: 'Trống', occupant: null },
+//       { id: 7, status: 'Trống', occupant: null },
+//     ]
+//   },
+// ];
 
 export function RoomSelection() {
   const [selectedRegistration, setSelectedRegistration] = useState<any>(null);
@@ -214,119 +216,89 @@ export function RoomSelection() {
   const [showBedSelection, setShowBedSelection] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<any>(null);
   const [selectedBeds, setSelectedBeds] = useState<any[]>([]);
-  const [roomsData, setRoomsData] = useState(JSON.parse(JSON.stringify(initialRoomsData)));
-  const [registrationData, setRegistrationData] = useState([
-    {
-      id: 1,
-      code: 'PDK001',
-      customer: 'Nguyễn Văn A',
-      phone: '0901234567',
-      idCard: '001234567890',
-      email: 'nguyenvana@email.com',
-      address: 'Hà Nội',
-      numPeople: 2,
-      gender: 'Nam',
-      area: 'Khu A',
-      roomType: 'Phòng 4 người',
-      rentalType: 'Thuê ở ghép',
-      price: 1800000,
-      selectedDate: '28/04/2026',
-      status: 'Chờ chọn phòng',
-      assignedRooms: []
-    },
-    {
-      id: 2,
-      code: 'PDK002',
-      customer: 'Trần Thị B',
-      phone: '0912345678',
-      idCard: '001234567891',
-      email: 'tranthib@email.com',
-      address: 'TP.HCM',
-      numPeople: 1,
-      gender: 'Nữ',
-      area: 'Khu B',
-      roomType: 'Phòng 2 người',
-      rentalType: 'Thuê ở ghép',
-      price: 2500000,
-      selectedDate: '30/04/2026',
-      status: 'Đã chọn phòng',
-      assignedRooms: [{ room: 'P205', bed: 1 }]
-    },
-    {
-      id: 3,
-      code: 'PDK003',
-      customer: 'Lê Văn C',
-      phone: '0923456789',
-      idCard: '001234567892',
-      email: 'levanc@email.com',
-      address: 'Đà Nẵng',
-      numPeople: 4,
-      gender: 'Nam',
-      area: 'Khu A',
-      roomType: 'Phòng 6 người',
-      rentalType: 'Thuê nguyên phòng',
-      price: 1500000,
-      selectedDate: '01/05/2026',
-      status: 'Đã chọn phòng',
-      assignedRooms: [{ room: 'P412', bed: null }]
-    },
-    {
-      id: 4,
-      code: 'PDK004',
-      customer: 'Phạm Thị D',
-      phone: '0934567890',
-      idCard: '001234567893',
-      email: 'phamthid@email.com',
-      address: 'Hải Phòng',
-      numPeople: 6,
-      gender: 'Nữ',
-      area: 'Khu B',
-      roomType: 'Phòng 2-4 người',
-      rentalType: 'Thuê ở ghép',
-      price: 2000000,
-      selectedDate: '02/05/2026',
-      status: 'Chờ chọn phòng',
-      assignedRooms: []
-    },
-  ]);
+  const [registrationDataState, setRegistrationDataState] = useState<any[]>([]);
+  const [roomsFormatted, setRoomsFormatted] = useState<any[]>([]);
+  
+  const { data: registrationData = [] } = useQuery({
+    queryKey: ['khachHang'],
+    queryFn: () => khachHangApi.getAll(),
+  });
+
+  const { data: phongPhuHop = [], isLoading: isLoadingPhong } = useQuery({
+    queryKey: ['phong-phu-hop', selectedRegistration?.id],
+    queryFn: () => phongApi.findPhuHop(selectedRegistration.id),
+    enabled: !!selectedRegistration?.id && showRoomList
+  });
+
+  // Initialize state with assignedRooms when data loads
+  useEffect(() => {
+    const dataWithAssignments = (registrationData as any[]).map(reg => ({
+      ...reg,
+      assignedRooms: reg.assignedRooms || []
+    }));
+    setRegistrationDataState(dataWithAssignments);
+  }, [registrationData]);
+
+  // Map API phòng data to UI format
+  useEffect(() => {
+    const mapped = (phongPhuHop as any[]).map(p => ({
+      id: p.maphong,
+      name: p.maphong,
+      type: p.loaiphong,
+      capacity: parseInt(p.succhuatoida),
+      area: p.khuvuc,
+      gender: p.gioitinhapdung,
+      price: parseFloat(p.giathuephong),
+      occupied: parseInt(p.tong_giuong) - parseInt(p.giuong_trong),
+      floor: parseInt(p.maphong.substring(1, 2)) || 1,
+      amenities: [],
+      beds: Array.from({ length: parseInt(p.tong_giuong) }, (_, i) => ({
+        id: i + 1,
+        status: i < parseInt(p.giuong_trong) ? 'Trống' : 'Đang sử dụng',
+        occupant: null
+      }))
+    }));
+    setRoomsFormatted(mapped);
+  }, [phongPhuHop]);
+  // console.log( 'ans ',khachHangApi.getAll())
 
   // Cập nhật occupant trong dữ liệu phòng khi có thay đổi assignment
-  useEffect(() => {
-    const updatedRooms = JSON.parse(JSON.stringify(initialRoomsData));
+  // useEffect(() => {
+  //   const updatedRooms = JSON.parse(JSON.stringify(initialRoomsData));
 
-    registrationData.forEach(reg => {
-      reg.assignedRooms.forEach((assignment: any) => {
-        const room = updatedRooms.find((r: any) => r.name === assignment.room);
-        if (room && assignment.bed) {
-          const bed = room.beds.find((b: any) => b.id === assignment.bed);
-          if (bed) {
-            bed.status = 'Đang sử dụng';
-            bed.occupant = reg.customer;
-          }
-        }
-      });
-    });
+  //   registrationData.forEach(reg => {
+  //     reg.assignedRooms.forEach((assignment: any) => {
+  //       const room = updatedRooms.find((r: any) => r.name === assignment.room);
+  //       if (room && assignment.bed) {
+  //         const bed = room.beds.find((b: any) => b.id === assignment.bed);
+  //         if (bed) {
+  //           bed.status = 'Đang sử dụng';
+  //           bed.occupant = reg.customer;
+  //         }
+  //       }
+  //     });
+  //   });
 
-    setRoomsData(updatedRooms);
-  }, [registrationData]);
+  //   setRoomsData(updatedRooms);
+  // }, [registrationData]);
 
   const handleSelectRoom = (room: any) => {
     setSelectedRoom(room);
     setSelectedBeds([]);
 
-    if (selectedRegistration.rentalType === 'Thuê nguyên phòng') {
+    if (selectedRegistration.loai_thue === 'Thuê nguyên phòng') {
       const newAssignment = {
         room: room.name,
         bed: null
       };
 
-      setRegistrationData(prevData =>
+      setRegistrationDataState(prevData =>
         prevData.map(reg => {
           if (reg.id === selectedRegistration.id) {
             const updatedReg = {
               ...reg,
               assignedRooms: [newAssignment],
-              status: 'Đã chọn phòng'
+              trang_thai: 'Đã chọn phòng'
             };
             setSelectedRegistration(updatedReg);
             return updatedReg;
@@ -335,7 +307,7 @@ export function RoomSelection() {
         })
       );
 
-      alert(`Đã chọn nguyên phòng ${room.name} cho ${selectedRegistration.numPeople} người`);
+      alert(`Đã chọn nguyên phòng ${room.name} cho ${selectedRegistration.so_nguoi} người`);
       setShowRoomList(false);
       setShowBedSelection(false);
     } else {
@@ -350,8 +322,8 @@ export function RoomSelection() {
     if (existing) {
       setSelectedBeds(selectedBeds.filter(b => b !== bed.id));
     } else {
-      const totalSelected = selectedRegistration.assignedRooms.length + selectedBeds.length;
-      if (totalSelected >= selectedRegistration.numPeople) {
+      const totalSelected = (selectedRegistration.assignedRooms?.length || 0) + selectedBeds.length;
+      if (totalSelected >= selectedRegistration.so_nguoi) {
         alert('Đã đủ số lượng giường cho khách hàng');
         return;
       }
@@ -370,14 +342,14 @@ export function RoomSelection() {
       bed: bedId
     }));
 
-    setRegistrationData(prevData =>
+    setRegistrationDataState(prevData =>
       prevData.map(reg => {
         if (reg.id === selectedRegistration.id) {
-          const updatedRooms = [...reg.assignedRooms, ...newAssignments];
+          const updatedRooms = [...(reg.assignedRooms || []), ...newAssignments];
           const updatedReg = {
             ...reg,
             assignedRooms: updatedRooms,
-            status: updatedRooms.length >= reg.numPeople ? 'Đã chọn phòng' : 'Chờ chọn phòng'
+            trang_thai: updatedRooms.length >= reg.so_nguoi ? 'Đã chọn phòng' : 'Chờ chọn phòng'
           };
           setSelectedRegistration(updatedReg);
           return updatedReg;
@@ -395,14 +367,14 @@ export function RoomSelection() {
   };
 
   const handleRemoveAssignment = (index: number) => {
-    setRegistrationData(prevData =>
+    setRegistrationDataState(prevData =>
       prevData.map(reg => {
         if (reg.id === selectedRegistration.id) {
-          const updatedRooms = reg.assignedRooms.filter((_: any, i: number) => i !== index);
+          const updatedRooms = (reg.assignedRooms || []).filter((_: any, i: number) => i !== index);
           const updatedReg = {
             ...reg,
             assignedRooms: updatedRooms,
-            status: updatedRooms.length >= reg.numPeople ? 'Đã chọn phòng' : 'Chờ chọn phòng'
+            trang_thai: updatedRooms.length >= reg.so_nguoi ? 'Đã chọn phòng' : 'Chờ chọn phòng'
           };
           setSelectedRegistration(updatedReg);
           return updatedReg;
@@ -418,12 +390,12 @@ export function RoomSelection() {
 
   const getRemainingBeds = () => {
     if (!selectedRegistration) return 0;
-    return selectedRegistration.numPeople - selectedRegistration.assignedRooms.length;
+    return selectedRegistration.so_nguoi - (selectedRegistration.assignedRooms?.length || 0);
   };
 
   const isRoomSufficient = (room: any) => {
-    if (selectedRegistration?.rentalType === 'Thuê nguyên phòng') {
-      return room.capacity >= selectedRegistration.numPeople;
+    if (selectedRegistration?.loai_thue === 'Thuê nguyên phòng') {
+      return room.capacity >= selectedRegistration.so_nguoi;
     }
     return getAvailableBeds(room) > 0;
   };
@@ -440,7 +412,7 @@ export function RoomSelection() {
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
             <h2 className="text-lg font-bold text-slate-900 mb-4">Phiếu đăng ký chờ chọn phòng</h2>
             <div className="space-y-3">
-              {registrationData.map((reg) => (
+              {registrationDataState.map((reg) => (
                 <button
                   key={reg.id}
                   onClick={() => {
@@ -457,19 +429,19 @@ export function RoomSelection() {
                   <div className="flex items-start justify-between mb-2">
                     <div>
                       <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded">
-                        {reg.code}
+                        {reg.ma_phieu}
                       </span>
-                      <p className="font-medium text-slate-900 mt-1">{reg.customer}</p>
-                      <p className="text-sm text-slate-600">{reg.area}</p>
+                      <p className="font-medium text-slate-900 mt-1">{reg.ho_ten}</p>
+                      <p className="text-sm text-slate-600">{reg.khu_vuc}</p>
                     </div>
                   </div>
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-slate-500">{reg.numPeople} người • {reg.rentalType}</span>
+                    <span className="text-slate-500">{reg.so_nguoi} người • {reg.loai_thue}</span>
                     <span className={`px-2 py-1 rounded-full ${
-                      reg.status === 'Đã chọn phòng' ? 'bg-green-100 text-green-700' :
+                      reg.trang_thai === 'Đã chọn phòng' ? 'bg-green-100 text-green-700' :
                       'bg-yellow-100 text-yellow-700'
                     }`}>
-                      {reg.status}
+                      {reg.trang_thai}
                     </span>
                   </div>
                 </button>
@@ -491,39 +463,39 @@ export function RoomSelection() {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-slate-600">Mã phiếu:</span>
-                    <p className="font-medium text-slate-900">{selectedRegistration.code}</p>
+                    <p className="font-medium text-slate-900">{selectedRegistration.ma_phieu}</p>
                   </div>
                   <div>
                     <span className="text-slate-600">Khách hàng:</span>
-                    <p className="font-medium text-slate-900">{selectedRegistration.customer}</p>
+                    <p className="font-medium text-slate-900">{selectedRegistration.ho_ten}</p>
                   </div>
                   <div>
                     <span className="text-slate-600">CCCD:</span>
-                    <p className="font-medium text-slate-900">{selectedRegistration.idCard}</p>
+                    <p className="font-medium text-slate-900">{selectedRegistration.cccd}</p>
                   </div>
                   <div>
-                    <span className="text-slate-600">Địa chỉ:</span>
-                    <p className="font-medium text-slate-900">{selectedRegistration.address}</p>
+                    <span className="text-slate-600">Số điện thoại:</span>
+                    <p className="font-medium text-slate-900">{selectedRegistration.phone}</p>
                   </div>
                   <div>
                     <span className="text-slate-600">Số người:</span>
-                    <p className="font-medium text-slate-900">{selectedRegistration.numPeople} người</p>
+                    <p className="font-medium text-slate-900">{selectedRegistration.so_nguoi} người</p>
                   </div>
                   <div>
                     <span className="text-slate-600">Giới tính:</span>
-                    <p className="font-medium text-slate-900">{selectedRegistration.gender}</p>
+                    <p className="font-medium text-slate-900">{selectedRegistration.gioi_tinh}</p>
                   </div>
                   <div>
                     <span className="text-slate-600">Loại thuê:</span>
-                    <p className="font-medium text-blue-600">{selectedRegistration.rentalType}</p>
+                    <p className="font-medium text-blue-600">{selectedRegistration.loai_thue}</p>
                   </div>
                   <div>
                     <span className="text-slate-600">Khu vực:</span>
-                    <p className="font-medium text-slate-900">{selectedRegistration.area}</p>
+                    <p className="font-medium text-slate-900">{selectedRegistration.khu_vuc}</p>
                   </div>
                 </div>
 
-                {selectedRegistration.assignedRooms && selectedRegistration.assignedRooms.length > 0 && (
+                {selectedRegistration.assignedRooms?.length > 0 && (
                   <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
                     <div className="flex items-start justify-between mb-3">
                       <h3 className="font-medium text-green-900">Đã chọn phòng/giường</h3>
@@ -547,20 +519,20 @@ export function RoomSelection() {
                   </div>
                 )}
 
-                {selectedRegistration.assignedRooms.length === 0 && (
+                {(!selectedRegistration.assignedRooms || selectedRegistration.assignedRooms.length === 0) && (
                   <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                     <div className="flex items-center gap-2">
                       <Info className="w-5 h-5 text-yellow-600" />
                       <p className="text-sm text-yellow-800">
-                        {selectedRegistration.rentalType === 'Thuê nguyên phòng'
-                          ? `Cần chọn 1 phòng có sức chứa tối thiểu ${selectedRegistration.numPeople} người`
-                          : `Cần chọn ${selectedRegistration.numPeople} giường cho ${selectedRegistration.numPeople} người`
+                        {selectedRegistration.loai_thue === 'Thuê nguyên phòng'
+                          ? `Cần chọn 1 phòng có sức chứa tối thiểu ${selectedRegistration.so_nguoi} người`
+                          : `Cần chọn ${selectedRegistration.so_nguoi} giường cho ${selectedRegistration.so_nguoi} người`
                         }
                       </p>
                     </div>
                   </div>
                 )}
-                {selectedRegistration.rentalType === 'Thuê ở ghép' && getRemainingBeds() > 0 && selectedRegistration.assignedRooms.length > 0 && (
+                {selectedRegistration.loai_thue === 'Thuê ở ghép' && getRemainingBeds() > 0 && selectedRegistration.assignedRooms?.length > 0 && (
                   <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                     <div className="flex items-center gap-2">
                       <Info className="w-5 h-5 text-yellow-600" />
@@ -577,16 +549,17 @@ export function RoomSelection() {
                   <div className="text-center">
                     <h3 className="text-lg font-bold text-slate-900 mb-2">Bắt đầu chọn phòng</h3>
                     <p className="text-slate-600 mb-6">
-                      {selectedRegistration.rentalType === 'Thuê nguyên phòng'
-                        ? `Hệ thống sẽ hiển thị các phòng có sức chứa đủ ${selectedRegistration.numPeople} người`
+                      {selectedRegistration.loai_thue === 'Thuê nguyên phòng'
+                        ? `Hệ thống sẽ hiển thị các phòng có sức chứa đủ ${selectedRegistration.so_nguoi} người`
                         : 'Hệ thống sẽ hiển thị các phòng có giường trống phù hợp'
                       }
                     </p>
                     <button
                       onClick={() => setShowRoomList(true)}
-                      className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                      disabled={isLoadingPhong}
+                      className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:bg-slate-400"
                     >
-                      Xem danh sách phòng phù hợp
+                      {isLoadingPhong ? 'Đang tải...' : 'Xem danh sách phòng phù hợp'}
                     </button>
                   </div>
                 </div>
@@ -597,9 +570,9 @@ export function RoomSelection() {
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <h2 className="text-xl font-bold text-slate-900">Danh sách phòng phù hợp</h2>
-                      {selectedRegistration.rentalType === 'Thuê nguyên phòng' && (
+                      {selectedRegistration.loai_thue === 'Thuê nguyên phòng' && (
                         <p className="text-sm text-slate-600 mt-1">
-                          Chọn 1 phòng có sức chứa đủ {selectedRegistration.numPeople} người
+                          Chọn 1 phòng có sức chứa đủ {selectedRegistration.so_nguoi} người
                         </p>
                       )}
                     </div>
@@ -610,14 +583,10 @@ export function RoomSelection() {
                       Quay lại
                     </button>
                   </div>
+                  {isLoadingPhong && <p className="text-slate-600">Đang tải danh sách phòng...</p>}
+                  {!isLoadingPhong && roomsFormatted.length === 0 && <p className="text-slate-600">Không có phòng phù hợp</p>}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {roomsData
-                      .filter((room: any) =>
-                        room.gender === selectedRegistration.gender &&
-                        room.area === selectedRegistration.area &&
-                        isRoomSufficient(room)
-                      )
-                      .map((room: any) => (
+                    {roomsFormatted.map((room: any) => (
                         <button
                           key={room.id}
                           onClick={() => handleSelectRoom(room)}
@@ -628,7 +597,7 @@ export function RoomSelection() {
                               <h3 className="font-bold text-lg text-slate-900">{room.name}</h3>
                               <p className="text-sm text-slate-600">{room.type} • Tầng {room.floor}</p>
                             </div>
-                            {selectedRegistration.rentalType === 'Thuê nguyên phòng' ? (
+                            {selectedRegistration.loai_thue === 'Thuê nguyên phòng' ? (
                               <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium">
                                 Sức chứa: {room.capacity} người
                               </span>
@@ -645,7 +614,7 @@ export function RoomSelection() {
                             </div>
                             <div className="flex items-center gap-2 text-slate-700">
                               <Bed className="w-4 h-4" />
-                              {selectedRegistration.rentalType === 'Thuê nguyên phòng'
+                              {selectedRegistration.loai_thue === 'Thuê nguyên phòng'
                                 ? `Phòng ${room.capacity} người`
                                 : `${room.occupied}/${room.capacity} giường đã sử dụng`
                               }

@@ -1,0 +1,15 @@
+
+services:
+  postgres_db:
+    image: postgres:15
+    container_name: kytucxa_db2
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: homestay_dorm
+    ports:
+      - "5432:5432"
+    volumes:
+      # Lệnh này sẽ tự động chạy file init.sql khi DB được khởi tạo lần đầu
+      - ./server/migrations/001_init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped

@@ -47,8 +47,8 @@ export const khachHangApi = {
   getById: (id: number) => api.get(`/khach-hang/${id}`).then(r => r.data.data),
   create: (data: any) => api.post('/khach-hang', data).then(r => r.data.data),
   update: (id: number, data: any) => api.put(`/khach-hang/${id}`, data).then(r => r.data.data),
-  updateStatus: (id: number, trang_thai: string) =>
-    api.patch(`/khach-hang/${id}/status`, { trang_thai }).then(r => r.data),
+updateStatus: (id: number, trang_thai: string) =>
+    api.patch(`/khach-hang/${id}/status`, { trang_thai }).then(r => r.data.data),
 };
 
 // ─── Rooms ───────────────────────────────────────────────────────────────────
@@ -57,6 +57,8 @@ export const phongApi = {
     api.get('/phong', { params }).then(r => r.data.data),
   getById: (id: number) => api.get(`/phong/${id}`).then(r => r.data.data),
   getStats: () => api.get('/phong/stats').then(r => r.data.data),
+  findPhuHop: (maPhieuDK: string) =>
+    api.get(`/phong/phu-hop/${maPhieuDK}`).then(r => r.data.data),
 };
 
 // ─── Appointments ────────────────────────────────────────────────────────────

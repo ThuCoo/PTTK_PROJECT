@@ -13,191 +13,365 @@ CREATE TABLE IF NOT EXISTS users (
   email          VARCHAR(100),
   created_at     TIMESTAMP DEFAULT NOW()
 );
+-- =========================================================================
+-- 1. TẠO CÁC BẢNG DANH MỤC & THỰC THỂ ĐỘC LẬP
+-- =========================================================================
 
--- Rooms
-CREATE TABLE IF NOT EXISTS phong (
-  id          SERIAL PRIMARY KEY,
-  ma_phong    VARCHAR(10)  UNIQUE NOT NULL,
-  khu_vuc     VARCHAR(10)  NOT NULL,
-  loai_phong  VARCHAR(50)  NOT NULL,
-  suc_chua    INT          NOT NULL,
-  dang_o      INT          NOT NULL DEFAULT 0,
-  gia_thue    BIGINT       NOT NULL,
-  gioi_tinh   VARCHAR(5)   NOT NULL CHECK (gioi_tinh IN ('Nam', 'Nữ')),
-  trang_thai  VARCHAR(30)  NOT NULL DEFAULT 'Trống',
-  created_at  TIMESTAMP    DEFAULT NOW()
+CREATE TABLE ChiNhanh (
+    MaChiNhanh VARCHAR(50) PRIMARY KEY,
+    TenChiNhanh VARCHAR(255) NOT NULL,
+    DiaChi TEXT
 );
 
--- Customers / Registration forms
-CREATE TABLE IF NOT EXISTS khach_hang (
-  id              SERIAL PRIMARY KEY,
-  ma_phieu        VARCHAR(20)  UNIQUE NOT NULL,
-  ho_ten          VARCHAR(100) NOT NULL,
-  phone           VARCHAR(15)  NOT NULL,
-  email           VARCHAR(100),
-  cccd            VARCHAR(20),
-  gioi_tinh       VARCHAR(5)   NOT NULL CHECK (gioi_tinh IN ('Nam', 'Nữ')),
-  so_nguoi        INT          NOT NULL DEFAULT 1,
-  khu_vuc         VARCHAR(10),
-  loai_phong      VARCHAR(50),
-  khoang_gia      VARCHAR(100),
-  ngay_vao        DATE,
-  thoi_han_thue   INT,
-  ghi_chu         TEXT,
-  loai_thue       VARCHAR(50),
-  trang_thai      VARCHAR(50)  NOT NULL DEFAULT 'Đang tư vấn',
-  created_at      TIMESTAMP    DEFAULT NOW()
+CREATE TABLE NhanVien (
+    MaNhanVien VARCHAR(50) PRIMARY KEY,
+    HoTen VARCHAR(255) NOT NULL,
+    VaiTro VARCHAR(100),
+    MaChiNhanh VARCHAR(50),
+    FOREIGN KEY (MaChiNhanh) REFERENCES ChiNhanh(MaChiNhanh)
 );
 
--- Appointments (room viewing schedule)
-CREATE TABLE IF NOT EXISTS lich_xem_phong (
-  id              SERIAL PRIMARY KEY,
-  khach_hang_id   INT          REFERENCES khach_hang(id) ON DELETE SET NULL,
-  phong_id        INT          REFERENCES phong(id) ON DELETE SET NULL,
-  thoi_gian       TIMESTAMP    NOT NULL,
-  trang_thai      VARCHAR(30)  NOT NULL DEFAULT 'Chờ xác nhận',
-  ghi_chu         TEXT,
-  created_at      TIMESTAMP    DEFAULT NOW()
+-- Bảng kế thừa từ Nhân Viên
+CREATE TABLE NV_Sale (
+    MaNhanVien VARCHAR(50) PRIMARY KEY,
+    FOREIGN KEY (MaNhanVien) REFERENCES NhanVien(MaNhanVien)
 );
 
--- Deposits
-CREATE TABLE IF NOT EXISTS dat_coc (
-  id                    SERIAL PRIMARY KEY,
-  ma_coc                VARCHAR(20)  UNIQUE NOT NULL,
-  khach_hang_id         INT          REFERENCES khach_hang(id) ON DELETE SET NULL,
-  phong_id              INT          REFERENCES phong(id) ON DELETE SET NULL,
-  so_giuong             INT          NOT NULL,
-  so_tien               BIGINT       NOT NULL,
-  ngay_tao              TIMESTAMP    DEFAULT NOW(),
-  han_thanh_toan        TIMESTAMP,
-  trang_thai            VARCHAR(40)  NOT NULL DEFAULT 'Chờ thanh toán',
-  phuong_thuc           VARCHAR(50),
-  anh_chung_tu_encrypted TEXT,         -- AES-256-CBC encrypted image data
-  mime_type             VARCHAR(50),   -- original MIME type for serving
-  nguoi_xac_nhan        VARCHAR(100),
-  ngay_xac_nhan         TIMESTAMP,
-  ghi_chu               TEXT
+CREATE TABLE QuanLy (
+    MaNhanVien VARCHAR(50) PRIMARY KEY,
+    FOREIGN KEY (MaNhanVien) REFERENCES NhanVien(MaNhanVien)
 );
 
--- Contracts
-CREATE TABLE IF NOT EXISTS hop_dong (
-  id                    SERIAL PRIMARY KEY,
-  ma_hd                 VARCHAR(20)  UNIQUE NOT NULL,
-  khach_hang_id         INT          REFERENCES khach_hang(id) ON DELETE SET NULL,
-  phong_id              INT          REFERENCES phong(id) ON DELETE SET NULL,
-  so_giuong             INT          NOT NULL,
-  ngay_bat_dau          DATE         NOT NULL,
-  ngay_ket_thuc         DATE         NOT NULL,
-  gia_thue_moi_giuong   BIGINT       NOT NULL,
-  tong_tien_thue        BIGINT       NOT NULL,
-  tien_coc              BIGINT       NOT NULL,
-  trang_thai            VARCHAR(30)  NOT NULL DEFAULT 'Chờ ký',
-  ngay_ky               DATE,
-  created_at            TIMESTAMP    DEFAULT NOW()
+CREATE TABLE NV_KeToan (
+    MaNhanVien VARCHAR(50) PRIMARY KEY,
+    FOREIGN KEY (MaNhanVien) REFERENCES NhanVien(MaNhanVien)
 );
 
--- Group members (for check-in)
-CREATE TABLE IF NOT EXISTS thanh_vien_nhom (
-  id                    SERIAL PRIMARY KEY,
-  hop_dong_id           INT          REFERENCES hop_dong(id) ON DELETE CASCADE,
-  ho_ten                VARCHAR(100) NOT NULL,
-  cccd                  VARCHAR(20)  NOT NULL,
-  phone                 VARCHAR(15),
-  ngay_sinh             DATE,
-  dia_chi_thuong_tru    TEXT
+CREATE TABLE NV_PhuTrach (
+    MaNhanVien VARCHAR(50) PRIMARY KEY,
+    FOREIGN KEY (MaNhanVien) REFERENCES NhanVien(MaNhanVien)
 );
 
--- Check-in records
-CREATE TABLE IF NOT EXISTS nhan_phong (
-  id              SERIAL PRIMARY KEY,
-  hop_dong_id     INT          REFERENCES hop_dong(id) ON DELETE SET NULL,
-  ngay_nhan       TIMESTAMP    DEFAULT NOW(),
-  ghi_chu_tai_san TEXT,
-  da_hoan_tat     BOOLEAN      DEFAULT FALSE,
-  created_by      INT          REFERENCES users(id) ON DELETE SET NULL
+CREATE TABLE DichVu (
+    MaDichVu VARCHAR(50) PRIMARY KEY,
+    TenDichVu VARCHAR(255),
+    DonGia DECIMAL(15,2),
+    DonViTinh VARCHAR(50)
+);
+CREATE TABLE DichVu_ChiNhanh(
+    MaDichVu VARCHAR(50), 
+    MaChiNhanh VARCHAR(50),
+     PRIMARY KEY (MaDichVu, MaChiNhanh),
+    FOREIGN KEY (MaChiNhanh) REFERENCES ChiNhanh(MaChiNhanh),
+    FOREIGN KEY (MaDichVu) REFERENCES DichVu(MaDichVu)
 );
 
--- Check-out records
-CREATE TABLE IF NOT EXISTS tra_phong (
-  id                SERIAL PRIMARY KEY,
-  hop_dong_id       INT          REFERENCES hop_dong(id) ON DELETE SET NULL,
-  ngay_tra          TIMESTAMP    DEFAULT NOW(),
-  ly_do             TEXT,
-  tien_boi_thuong   BIGINT       DEFAULT 0,
-  tien_hoan_coc     BIGINT       DEFAULT 0,
-  ghi_chu           TEXT,
-  created_by        INT          REFERENCES users(id) ON DELETE SET NULL
+CREATE TABLE KhachHang (
+    MaKhachHang VARCHAR(50) PRIMARY KEY,
+    HoTen VARCHAR(255),
+    Sdt VARCHAR(20),
+    CCCD VARCHAR(20),
+    GioiTinh VARCHAR(20),
+    Email VARCHAR(100)
 );
 
--- Monthly payment invoices
-CREATE TABLE IF NOT EXISTS thanh_toan (
-  id                SERIAL PRIMARY KEY,
-  ma_phieu          VARCHAR(20)  UNIQUE NOT NULL,
-  hop_dong_id       INT          REFERENCES hop_dong(id) ON DELETE SET NULL,
-  thang             VARCHAR(20)  NOT NULL,
-  tien_thue         BIGINT       NOT NULL,
-  tien_dien         BIGINT       NOT NULL DEFAULT 0,
-  tien_nuoc         BIGINT       NOT NULL DEFAULT 0,
-  phi_xe            BIGINT       NOT NULL DEFAULT 0,
-  tong_tien         BIGINT       NOT NULL,
-  han_thanh_toan    DATE,
-  ngay_thanh_toan   TIMESTAMP,
-  phuong_thuc       VARCHAR(50),
-  trang_thai        VARCHAR(30)  NOT NULL DEFAULT 'Chưa thanh toán',
-  created_at        TIMESTAMP    DEFAULT NOW()
+CREATE TABLE DieuKienThue (
+    MaDieuKien VARCHAR(50) PRIMARY KEY,
+    TenDieuKien VARCHAR(255),
+    MoTa TEXT
 );
 
--- ============================================================
---  SEED DATA
--- ============================================================
+CREATE TABLE LoaiThietBi (
+    MaLoaiThietBi VARCHAR(50) PRIMARY KEY,
+    TenLoaiThietBi VARCHAR(255),
+    GiaTriBoiThuong DECIMAL(15,2),
+    QuyDinhSuDung TEXT
+);
 
--- Seed users (passwords are bcrypt hashes of 'password123')
--- quan_ly: admin / password123
--- nhan_vien: nhanvien / password123
-INSERT INTO users (username, password_hash, ho_ten, role, email) VALUES
-  ('admin',     '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Nguyễn Văn X',  'quan_ly',   'admin@homestay.com'),
-  ('nhanvien',  '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Nhân viên Sale','nhan_vien', 'sale@homestay.com')
-ON CONFLICT (username) DO NOTHING;
+-- =========================================================================
+-- 2. TẠO CÁC BẢNG LIÊN QUAN ĐẾN CƠ SỞ VẬT CHẤT (PHÒNG, GIƯỜNG, THIẾT BỊ)
+-- =========================================================================
 
--- Seed rooms
-INSERT INTO phong (ma_phong, khu_vuc, loai_phong, suc_chua, dang_o, gia_thue, gioi_tinh, trang_thai) VALUES
-  ('P301', 'Khu A', 'Phòng 4 người', 4, 4, 1800000, 'Nam', 'Đang sử dụng'),
-  ('P302', 'Khu A', 'Phòng 4 người', 4, 2, 1800000, 'Nam', 'Còn giường'),
-  ('P205', 'Khu B', 'Phòng 2 người', 2, 0, 2500000, 'Nữ', 'Trống'),
-  ('P412', 'Khu A', 'Phòng 6 người', 6, 0, 1500000, 'Nam', 'Đã cọc'),
-  ('P108', 'Khu C', 'Phòng 2 người', 2, 0, 2200000, 'Nữ', 'Trống')
-ON CONFLICT (ma_phong) DO NOTHING;
+CREATE TABLE Phong (
+    MaPhong VARCHAR(50) PRIMARY KEY,
+    LoaiPhong VARCHAR(100),
+    SucChuaToiDa INT,
+    GiaThuePhong DECIMAL(15,2),
+    TrangThai VARCHAR(100),
+    KhuVuc VARCHAR(100),
+    GioiTinhApDung VARCHAR(50),
+    MaChiNhanh VARCHAR(50),
+    FOREIGN KEY (MaChiNhanh) REFERENCES ChiNhanh(MaChiNhanh)
+);
+CREATE TABLE Phong_DieuKienThue(
+    MaPhong VARCHAR(50), 
+    MaDieuKien VARCHAR(50),
+    PRIMARY KEY (MaPhong, MaDieuKien),
+    FOREIGN KEY (MaPhong) REFERENCES Phong(MaPhong),
+    FOREIGN KEY (MaDieuKien) REFERENCES DieuKienThue(MaDieuKien)  
+);
 
--- Seed customers
-INSERT INTO khach_hang (ma_phieu, ho_ten, phone, email, cccd, gioi_tinh, so_nguoi, khu_vuc, loai_phong, khoang_gia, ngay_vao, thoi_han_thue, ghi_chu, loai_thue, trang_thai) VALUES
-  ('PDK001','Nguyễn Văn A','0901234567','nguyenvana@email.com','001234567890','Nam',2,'Khu A','Phòng 4 người','1.500.000 - 2.000.000','2026-05-15',6,'Cần gần trường đại học','Thuê ở ghép','Đang tư vấn'),
-  ('PDK002','Trần Thị B',  '0912345678','tranthib@email.com',  '002345678901','Nữ',1,'Khu B','Phòng 2 người','2.000.000 - 2.500.000','2026-05-10',12,'Cần phòng yên tĩnh','Thuê ở ghép','Đã lên lịch xem phòng'),
-  ('PDK003','Lê Văn C',    '0923456789','levanc@email.com',    '003456789012','Nam',4,'Khu A','Phòng 6 người','1.200.000 - 1.500.000','2026-06-01',6,'Thuê cho nhóm 4 bạn','Thuê nguyên phòng','Đồng ý thuê')
-ON CONFLICT (ma_phieu) DO NOTHING;
+CREATE TABLE Giuong (
+    MaGiuong VARCHAR(50) PRIMARY KEY, -- Giữ nguyên thiết kế nhưng bổ sung PK bắt buộc
+    GiaThueGiuong DECIMAL(15,2),
+    TrangThai VARCHAR(100),
+    MaPhong VARCHAR(50),
+    FOREIGN KEY (MaPhong) REFERENCES Phong(MaPhong)
+);
 
--- Seed appointments
-INSERT INTO lich_xem_phong (khach_hang_id, phong_id, thoi_gian, trang_thai, ghi_chu) VALUES
-  (2, 3, '2026-05-05 14:00:00', 'Chờ xác nhận', 'Khách muốn xem phòng P205'),
-  (3, 4, '2026-05-06 09:00:00', 'Chờ xác nhận', 'Xem phòng P412 cho nhóm')
-ON CONFLICT DO NOTHING;
+-- =========================================================================
+-- 3. QUY TRÌNH 1 & 2: ĐĂNG KÝ VÀ ĐẶT CỌC
+-- =========================================================================
 
--- Seed deposits
-INSERT INTO dat_coc (ma_coc, khach_hang_id, phong_id, so_giuong, so_tien, han_thanh_toan, trang_thai, phuong_thuc, nguoi_xac_nhan, ngay_xac_nhan) VALUES
-  ('DC001', 1, 1, 2, 7200000,  NOW() + INTERVAL '24 hours', 'Đã xác nhận',   'Chuyển khoản', 'Quản lý - Nguyễn Văn X', NOW() - INTERVAL '2 hours'),
-  ('DC002', 2, 3, 1, 5000000,  NOW() + INTERVAL '24 hours', 'Chờ xác nhận',  'Chuyển khoản', NULL, NULL),
-  ('DC003', 3, 4, 3, 9000000,  NOW() + INTERVAL '24 hours', 'Chờ thanh toán', NULL,           NULL, NULL)
-ON CONFLICT (ma_coc) DO NOTHING;
+CREATE TABLE PhieuDangKy (
+    MaPhieuDK VARCHAR(50) PRIMARY KEY,
+    SoNguoiDuKien INT,
+    NgayDuKienVao DATE,
+    TrangThai VARCHAR(100),
+    HinhThucThue VARCHAR(100),
+    NgayLap DATE,
+    KhuVucMongMuon VARCHAR(100),
+    MaKhachHang VARCHAR(50), -- Đại diện
+    MaNVSale VARCHAR(50),
+    FOREIGN KEY (MaKhachHang) REFERENCES KhachHang(MaKhachHang),
+    FOREIGN KEY (MaNVSale) REFERENCES NV_Sale(MaNhanVien)
+);
 
--- Seed contracts
-INSERT INTO hop_dong (ma_hd, khach_hang_id, phong_id, so_giuong, ngay_bat_dau, ngay_ket_thuc, gia_thue_moi_giuong, tong_tien_thue, tien_coc, trang_thai, ngay_ky) VALUES
-  ('HD001', 1, 1, 2, '2026-05-01', '2026-11-01', 1800000, 3600000, 7200000, 'Đang hiệu lực', '2026-04-28'),
-  ('HD002', 2, 3, 1, '2026-05-05', '2026-11-05', 2500000, 2500000, 5000000, 'Chờ ký',        NULL),
-  ('HD003', 3, 4, 3, '2026-04-15', '2026-10-15', 1500000, 4500000, 9000000, 'Đang hiệu lực', '2026-04-10')
-ON CONFLICT (ma_hd) DO NOTHING;
+-- Quan hệ M:N giữa PhieuDangKy và Phong
+CREATE TABLE PhieuDangKy_Phong (
+    MaPhieuDK VARCHAR(50),
+    MaPhong VARCHAR(50),
+    PRIMARY KEY (MaPhieuDK, MaPhong),
+    FOREIGN KEY (MaPhieuDK) REFERENCES PhieuDangKy(MaPhieuDK),
+    FOREIGN KEY (MaPhong) REFERENCES Phong(MaPhong)
+);
+CREATE TABLE HoaDonCoc (
+    MaHoaDon VARCHAR(50) PRIMARY KEY,
+    NgayLap DATE,
+    SoTienCoc DECIMAL(15,2),
+    TrangThai VARCHAR(100),
+    ThoiGianCoc TIMESTAMP,
+    MaPhieuDK VARCHAR(50),
+    MaNVKeToan VARCHAR(50),
+    FOREIGN KEY (MaPhieuDK) REFERENCES PhieuDangKy(MaPhieuDK),
+    FOREIGN KEY (MaNVKeToan) REFERENCES NV_KeToan(MaNhanVien)
+);
 
--- Seed payments
-INSERT INTO thanh_toan (ma_phieu, hop_dong_id, thang, tien_thue, tien_dien, tien_nuoc, phi_xe, tong_tien, han_thanh_toan, ngay_thanh_toan, phuong_thuc, trang_thai) VALUES
-  ('PT001', 1, 'Tháng 5/2026', 3600000, 250000, 160000, 50000, 4060000, '2026-05-05', '2026-05-03', 'Chuyển khoản', 'Đã thanh toán'),
-  ('PT002', 2, 'Tháng 5/2026', 2500000, 180000,  80000,     0, 2760000, '2026-05-05', NULL,          NULL,           'Chưa thanh toán'),
-  ('PT003', 3, 'Tháng 5/2026', 4500000, 320000, 240000, 100000, 5160000, '2026-05-05', NULL,          NULL,           'Chưa thanh toán')
-ON CONFLICT (ma_phieu) DO NOTHING;
+CREATE TABLE ThongTinGD (
+    MaGiaoDich VARCHAR(50) PRIMARY KEY,
+    MaChungTu VARCHAR(100),
+    SoTienChuyen DECIMAL(15,2),
+    NoiDungTT TEXT,
+    ThoiGianTT TIMESTAMP,
+    PhuongThucTT VARCHAR(100),
+    MaKhachHang VARCHAR(50),
+    MaHoaDon VARCHAR(50),
+    FOREIGN KEY (MaKhachHang) REFERENCES KhachHang(MaKhachHang),
+    FOREIGN KEY (MaHoaDon) REFERENCES HoaDonCoc(MaHoaDon)
+);
+
+
+-- =========================================================================
+-- 4. QUY TRÌNH 3: HỢP ĐỒNG VÀ BÀN GIAO
+-- =========================================================================
+
+CREATE TABLE HopDong (
+    MaHopDong VARCHAR(50) PRIMARY KEY,
+    NgayNhanPhong DATE,
+    KyThanhToan VARCHAR(100),
+    TienBanGiao DECIMAL(15,2),
+    NgayLap DATE,
+    TrangThai VARCHAR(100),
+    MaKhachHang VARCHAR(50),
+    MaHoaDon VARCHAR(50),
+    FOREIGN KEY (MaKhachHang) REFERENCES KhachHang(MaKhachHang),
+    FOREIGN KEY (MaHoaDon) REFERENCES HoaDonCoc(MaHoaDon)
+);
+
+-- Quan hệ M:N giữa HopDong và DichVu
+CREATE TABLE HopDong_DichVu (
+    MaHopDong VARCHAR(50),
+    MaDichVu VARCHAR(50),
+    PRIMARY KEY (MaHopDong, MaDichVu),
+    FOREIGN KEY (MaHopDong) REFERENCES HopDong(MaHopDong),
+    FOREIGN KEY (MaDichVu) REFERENCES DichVu(MaDichVu)
+);
+
+-- Quan hệ M:N giữa HopDong và Giuong
+CREATE TABLE HopDong_Giuong (
+    MaHopDong VARCHAR(50),
+    MaGiuong VARCHAR(50),
+    PRIMARY KEY (MaHopDong, MaGiuong),
+    FOREIGN KEY (MaHopDong) REFERENCES HopDong(MaHopDong),
+    FOREIGN KEY (MaGiuong) REFERENCES Giuong(MaGiuong)
+);
+
+CREATE TABLE BienBanBanGiao (
+    MaBienBan VARCHAR(50) PRIMARY KEY,
+    NgayBanGiao DATE,
+    TrangThai VARCHAR(100),
+    MaHopDong VARCHAR(50),
+    MaQuanLy VARCHAR(50),
+    FOREIGN KEY (MaHopDong) REFERENCES HopDong(MaHopDong),
+    FOREIGN KEY (MaQuanLy) REFERENCES QuanLy(MaNhanVien)
+);
+
+CREATE TABLE TrangThietBi (
+    MaTrangThietBi VARCHAR(50) PRIMARY KEY,
+    TinhTrang VARCHAR(100),
+    MaLoaiThietBi VARCHAR(50),
+    MaPhong VARCHAR(50),
+    FOREIGN KEY (MaLoaiThietBi) REFERENCES LoaiThietBi(MaLoaiThietBi),
+    FOREIGN KEY (MaPhong) REFERENCES Phong(MaPhong)
+);
+
+-- =========================================================================
+-- 5. QUY TRÌNH 4: TRẢ PHÒNG VÀ THANH TOÁN
+-- =========================================================================
+
+CREATE TABLE PhieuDangKyTra (
+    MaPhieuTra VARCHAR(50) PRIMARY KEY,
+    NgayLap DATE,
+    NgayDuKienTra DATE,
+    LyDo TEXT,
+    TrangThai VARCHAR(100),
+    MaHopDong VARCHAR(50),
+    FOREIGN KEY (MaHopDong) REFERENCES HopDong(MaHopDong)
+);
+
+CREATE TABLE PhieuKiemTra (
+    MaPhieuKT VARCHAR(50) PRIMARY KEY,
+    NgayLap DATE,
+    MaPhieuTra VARCHAR(50),
+    MaQuanLy VARCHAR(50),
+    FOREIGN KEY (MaPhieuTra) REFERENCES PhieuDangKyTra(MaPhieuTra),
+    FOREIGN KEY (MaQuanLy) REFERENCES QuanLy(MaNhanVien)
+);
+
+CREATE TABLE ChiTietKhauTru (
+    MaPhieuKT VARCHAR(50),
+    LoaiKhauTru VARCHAR(100),
+    SoTienPhaiTra DECIMAL(15,2),
+    MoTa TEXT,
+    PRIMARY KEY (MaPhieuKT, LoaiKhauTru), -- Composite Primary Key
+    FOREIGN KEY (MaPhieuKT) REFERENCES PhieuKiemTra(MaPhieuKT)
+);
+
+CREATE TABLE PhieuThanhToan (
+    MaPhieuTT VARCHAR(50) PRIMARY KEY,
+    NgayLap DATE,
+    HinhThuc VARCHAR(100),
+    TrangThai VARCHAR(100),
+    MaPhieuKT VARCHAR(50),
+    MaNVKeToan VARCHAR(50),
+    FOREIGN KEY (MaPhieuKT) REFERENCES PhieuKiemTra(MaPhieuKT),
+    FOREIGN KEY (MaNVKeToan) REFERENCES NV_KeToan(MaNhanVien)
+);
+
+CREATE TABLE BienBanTraPhong (
+    MaBienBan VARCHAR(50) PRIMARY KEY,
+    NgayLap DATE,
+    MaPhieuTra VARCHAR(50),
+    FOREIGN KEY (MaPhieuTra) REFERENCES PhieuDangKyTra(MaPhieuTra)
+);
+INSERT INTO ChiNhanh VALUES 
+('CN01', 'Ký túc xá Cơ sở 1', '227 Nguyễn Văn Cừ, Q5, TP.HCM'),
+('CN02', 'Ký túc xá Cơ sở 2', 'Linh Trung, Thủ Đức, TP.HCM');
+
+INSERT INTO NhanVien VALUES 
+('NV01', 'Nguyễn Văn Sale', 'Nhân viên Sale', 'CN01'),
+('NV02', 'Trần Thị Quản Lý', 'Quản lý', 'CN01'),
+('NV03', 'Lê Văn Kế Toán', 'Kế toán', 'CN01'),
+('NV04', 'Phạm Phụ Trách', 'Phụ trách cơ sở', 'CN01');
+
+INSERT INTO NV_Sale VALUES ('NV01');
+INSERT INTO QuanLy VALUES ('NV02');
+INSERT INTO NV_KeToan VALUES ('NV03');
+INSERT INTO NV_PhuTrach VALUES ('NV04');
+
+INSERT INTO KhachHang VALUES 
+('KH01', 'Nguyễn Thị Sinh Viên', '0901234567', '079123456789', 'Nữ', 'sinhvien1@fit.hcmus.edu.vn'),
+('KH02', 'Trần Văn Sinh Viên', '0987654321', '079987654321', 'Nam', 'sinhvien2@fit.hcmus.edu.vn');
+
+INSERT INTO DichVu VALUES 
+('DV01', 'Tiền điện', 3500, 'kWh'),
+('DV02', 'Tiền nước', 20000, 'Khối'),
+('DV03', 'Wifi', 100000, 'Tháng'),
+('DV04', 'Giữ xe máy', 150000, 'Tháng');
+
+INSERT INTO DichVu_ChiNhanh VALUES 
+('DV01', 'CN01'), ('DV02', 'CN01'), ('DV03', 'CN01'), ('DV04', 'CN01');
+
+INSERT INTO DieuKienThue VALUES 
+('DK01', 'Không hút thuốc', 'Tuyệt đối cấm hút thuốc trong phòng và hành lang'),
+('DK02', 'Giờ giới nghiêm', 'Ký túc xá đóng cửa lúc 23h00 mỗi ngày');
+
+INSERT INTO LoaiThietBi VALUES 
+('LTB01', 'Giường tầng sắt', 1500000, 'Không chạy nhảy trên giường'),
+('LTB02', 'Tủ lạnh mini', 3000000, 'Thường xuyên vệ sinh xả đá'),
+('LTB03', 'Máy lạnh Daikin 1HP', 8000000, 'Chỉ mở 26 độ trở lên');
+
+-- 2. Dữ liệu Phòng và Giường
+INSERT INTO Phong VALUES 
+('P101', 'Phòng 4 người', 4, 6000000, 'Còn trống', 'Khu A', 'Nam', 'CN01'),
+('P102', 'Phòng 2 người', 2, 4000000, 'Đang thuê', 'Khu B', 'Nữ', 'CN01'),
+('P103', 'Phòng 4 người', 4, 6000000, 'Bảo trì', 'Khu A', 'Nam', 'CN01');
+
+INSERT INTO Phong_DieuKienThue VALUES 
+('P101', 'DK01'), ('P101', 'DK02'),
+('P102', 'DK01');
+
+INSERT INTO Giuong VALUES 
+('G101_1', 1500000, 'Trống', 'P101'),
+('G101_2', 1500000, 'Trống', 'P101'),
+('G101_3', 1500000, 'Trống', 'P101'),
+('G101_4', 1500000, 'Trống', 'P101'),
+('G102_1', 2000000, 'Đã thuê', 'P102'),
+('G102_2', 2000000, 'Đã thuê', 'P102');
+
+-- 3. Dữ liệu Quy trình Đăng ký & Đặt Cọc (Khách KH01 muốn thuê phòng P102)
+INSERT INTO PhieuDangKy VALUES 
+('PDK01', 1, '2026-05-15', 'Chờ xác nhận', 'Ở ghép', '2026-05-01', 'Khu B', 'KH01', 'NV01');
+
+INSERT INTO PhieuDangKy_Phong VALUES ('PDK01', 'P102');
+
+INSERT INTO HoaDonCoc VALUES 
+('HDC01', '2026-05-02', 2000000, 'Đã thanh toán', '2026-05-02 14:30:00', 'PDK01', 'NV03');
+
+INSERT INTO ThongTinGD VALUES 
+('GD01', 'CT_MOMO_98765', 2000000, 'Thanh toan coc giuong G102_1', '2026-05-02 14:25:00', 'Chuyển khoản', 'KH01', 'HDC01');
+
+-- 4. Dữ liệu Quy trình Hợp Đồng & Bàn Giao
+INSERT INTO HopDong VALUES 
+('HD01', '2026-05-15', 'Hàng tháng', 2000000, '2026-05-15', 'Đang hiệu lực', 'KH01', 'HDC01');
+
+INSERT INTO HopDong_DichVu VALUES 
+('HD01', 'DV01'), ('HD01', 'DV02'), ('HD01', 'DV03');
+
+INSERT INTO HopDong_Giuong VALUES 
+('HD01', 'G102_1');
+
+INSERT INTO BienBanBanGiao VALUES 
+('BBBG01', '2026-05-15', 'Đã bàn giao', 'HD01', 'NV02');
+
+INSERT INTO TrangThietBi VALUES 
+('TTB01', 'Đang sử dụng tốt', 'LTB01', 'P102'),
+('TTB02', 'Hơi cũ', 'LTB02', 'P102'),
+('TTB03', 'Mới 100%', 'LTB03', 'P102');
+
+-- 5. Dữ liệu Quy trình Trả Phòng (Giả sử 1 năm sau khách KH01 trả)
+INSERT INTO PhieuDangKyTra VALUES 
+('PT01', '2027-05-01', '2027-05-15', 'Tốt nghiệp', 'Chờ xử lý', 'HD01');
+
+INSERT INTO PhieuKiemTra VALUES 
+('PKT01', '2027-05-15', 'PT01', 'NV02');
+
+INSERT INTO ChiTietKhauTru VALUES 
+('PKT01', 'Hư hỏng thiết bị', 200000, 'Làm xước cánh tủ lạnh LTB02'),
+('PKT01', 'Tiện ích nợ', 50000, 'Tiền điện tháng cuối');
+
+INSERT INTO PhieuThanhToan VALUES 
+('PTT01', '2027-05-16', 'Chuyển khoản', 'Đã hoàn tất', 'PKT01', 'NV03');
+
+INSERT INTO BienBanTraPhong VALUES 
+('BBTP01', '2027-05-16', 'PT01');

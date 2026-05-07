@@ -17,14 +17,14 @@ INSERT INTO users (username, password_hash, ho_ten, role, email)
 VALUES
 (
   'admin',
-  '$2b$10$mkjNkaCnKrBISTlS5hIIGub8nBGPgL/DCdNjVcfxaR8O9AKi044Ki',
+  '$2b$10$4JspCUXYgMerCRWa1s8t/uCerFqiKUOMB61RA7B3ZPtfaCoot8/c2',
   'Admin',
   'quan_ly',
   'admin@gmail.com'
 ),
 (
   'nhanvien',
-  '$2b$10$mkjNkaCnKrBISTlS5hIIGub8nBGPgL/DCdNjVcfxaR8O9AKi044Ki',
+  '$2b$10$4JspCUXYgMerCRWa1s8t/uCerFqiKUOMB61RA7B3ZPtfaCoot8/c2',
   'Nhan Vien',
   'nhan_vien',
   'nv@gmail.com'
@@ -155,12 +155,13 @@ CREATE TABLE PhieuDangKy (
 );
 
 -- Quan hệ M:N giữa PhieuDangKy và Phong
-CREATE TABLE PhieuDangKy_Phong (
+CREATE TABLE PhieuDangKy_Giuong (
     MaPhieuDK VARCHAR(50),
-    MaPhong VARCHAR(50),
-    PRIMARY KEY (MaPhieuDK, MaPhong),
+    MaGiuong VARCHAR(50),
+
+    PRIMARY KEY (MaPhieuDK, MaGiuong),
     FOREIGN KEY (MaPhieuDK) REFERENCES PhieuDangKy(MaPhieuDK),
-    FOREIGN KEY (MaPhong) REFERENCES Phong(MaPhong)
+    FOREIGN KEY (MaGiuong) REFERENCES Giuong(Magiuong)
 );
 CREATE TABLE HoaDonCoc (
     MaHoaDon VARCHAR(50) PRIMARY KEY,
@@ -291,104 +292,138 @@ CREATE TABLE BienBanTraPhong (
     MaPhieuTra VARCHAR(50),
     FOREIGN KEY (MaPhieuTra) REFERENCES PhieuDangKyTra(MaPhieuTra)
 );
+-- =========================================================================
+-- CHÚ Ý: NẾU BẠN CHƯA CÓ BẢNG PhieuDangKy_Phong, HÃY CHẠY LỆNH DƯỚI ĐÂY
+CREATE TABLE IF NOT EXISTS PhieuDangKy_Phong (
+    MaPhieuDK VARCHAR(50),
+    MaPhong VARCHAR(50),
+    PRIMARY KEY (MaPhieuDK, MaPhong),
+    FOREIGN KEY (MaPhieuDK) REFERENCES PhieuDangKy(MaPhieuDK),
+    FOREIGN KEY (MaPhong) REFERENCES Phong(MaPhong)
+);
+ALTER TABLE KhachHang ADD COLUMN IF NOT EXISTS NgaySinh DATE;
+ALTER TABLE KhachHang ADD COLUMN IF NOT EXISTS DiaChi TEXT;
+
+-- 2. Tạo bảng liên kết Nhiều-Nhiều giữa Phiếu Đăng Ký và Khách Hàng
+CREATE TABLE IF NOT EXISTS PhieuDangKy_KhachHang (
+    MaPhieuDK VARCHAR(50),
+    MaKhachHang VARCHAR(50),
+    PRIMARY KEY (MaPhieuDK, MaKhachHang),
+    FOREIGN KEY (MaPhieuDK) REFERENCES PhieuDangKy(MaPhieuDK) ON DELETE CASCADE,
+    FOREIGN KEY (MaKhachHang) REFERENCES KhachHang(MaKhachHang) ON DELETE CASCADE
+);
+-- =========================================================================
+
+-- =========================================================================
+-- 1. DỮ LIỆU DANH MỤC CƠ BẢN (Chi Nhánh, Nhân Viên, Dịch Vụ)
+-- =========================================================================
 INSERT INTO ChiNhanh VALUES 
 ('CN01', 'Ký túc xá Cơ sở 1', '227 Nguyễn Văn Cừ, Q5, TP.HCM'),
-('CN02', 'Ký túc xá Cơ sở 2', 'Linh Trung, Thủ Đức, TP.HCM');
+('CN02', 'Ký túc xá Cơ sở 2', 'Linh Trung, Thủ Đức, TP.HCM')
+ON CONFLICT DO NOTHING;
 
 INSERT INTO NhanVien VALUES 
 ('NV01', 'Nguyễn Văn Sale', 'Nhân viên Sale', 'CN01'),
 ('NV02', 'Trần Thị Quản Lý', 'Quản lý', 'CN01'),
 ('NV03', 'Lê Văn Kế Toán', 'Kế toán', 'CN01'),
-('NV04', 'Phạm Phụ Trách', 'Phụ trách cơ sở', 'CN01');
+('NV04', 'Phạm Phụ Trách', 'Phụ trách cơ sở', 'CN01')
+ON CONFLICT DO NOTHING;
 
-INSERT INTO NV_Sale VALUES ('NV01');
-INSERT INTO QuanLy VALUES ('NV02');
-INSERT INTO NV_KeToan VALUES ('NV03');
-INSERT INTO NV_PhuTrach VALUES ('NV04');
+INSERT INTO NV_Sale VALUES ('NV01') ON CONFLICT DO NOTHING;
+INSERT INTO QuanLy VALUES ('NV02') ON CONFLICT DO NOTHING;
+INSERT INTO NV_KeToan VALUES ('NV03') ON CONFLICT DO NOTHING;
+INSERT INTO NV_PhuTrach VALUES ('NV04') ON CONFLICT DO NOTHING;
 
-INSERT INTO KhachHang VALUES 
-('KH01', 'Nguyễn Thị Sinh Viên', '0901234567', '079123456789', 'Nữ', 'sinhvien1@fit.hcmus.edu.vn'),
-('KH02', 'Trần Văn Sinh Viên', '0987654321', '079987654321', 'Nam', 'sinhvien2@fit.hcmus.edu.vn');
+-- =========================================================================
+-- 2. DỮ LIỆU KHÁCH HÀNG (Đa dạng SĐT để test tìm kiếm Cọc)
+-- =========================================================================
+INSERT INTO KhachHang (MaKhachHang, HoTen, Sdt, CCCD, GioiTinh, Email) VALUES 
+('KH001', 'Nguyễn Văn An', '0901111111', '079111111111', 'Nam', 'an@gmail.com'),
+('KH002', 'Trần Thị Bình', '0902222222', '079222222222', 'Nữ', 'binh@gmail.com'),
+('KH003', 'Lê Văn Cường', '0903333333', '079333333333', 'Nam', 'cuong@gmail.com'),
+('KH004', 'Phạm Thị Dung', '0904444444', '079444444444', 'Nữ', 'dung@gmail.com'),
+('KH005', 'Hoàng Văn Em', '0905555555', '079555555555', 'Nam', 'em@gmail.com')
+ON CONFLICT (MaKhachHang) DO UPDATE SET Sdt = EXCLUDED.Sdt, HoTen = EXCLUDED.HoTen;
 
-INSERT INTO DichVu VALUES 
-('DV01', 'Tiền điện', 3500, 'kWh'),
-('DV02', 'Tiền nước', 20000, 'Khối'),
-('DV03', 'Wifi', 100000, 'Tháng'),
-('DV04', 'Giữ xe máy', 150000, 'Tháng');
+-- =========================================================================
+-- 3. DỮ LIỆU PHÒNG & GIƯỜNG (Các kịch bản phòng khác nhau)
+-- =========================================================================
+INSERT INTO Phong (MaPhong, LoaiPhong, SucChuaToiDa, GiaThuePhong, TrangThai, KhuVuc, GioiTinhApDung, MaChiNhanh) VALUES 
+('P101', 'Phòng 4 người', 4, 6000000, 'Còn trống', 'Khu A', 'Nam', 'CN01'), -- Phòng trống hoàn toàn
+('P102', 'Phòng 4 người', 4, 6000000, 'Còn trống', 'Khu B', 'Nữ', 'CN01'),  -- Phòng Nữ, đang có 2 người ở (còn dư 2 giường)
+('P103', 'Phòng 2 người', 2, 4000000, 'Hết chỗ', 'Khu A', 'Nam', 'CN01'),   -- Phòng đã Full
+('P201', 'Phòng 6 người', 6, 8000000, 'Còn trống', 'Khu C', 'Nữ', 'CN02')  -- Phòng rộng cho nhóm
+ON CONFLICT DO NOTHING;
 
-INSERT INTO DichVu_ChiNhanh VALUES 
-('DV01', 'CN01'), ('DV02', 'CN01'), ('DV03', 'CN01'), ('DV04', 'CN01');
-
-INSERT INTO DieuKienThue VALUES 
-('DK01', 'Không hút thuốc', 'Tuyệt đối cấm hút thuốc trong phòng và hành lang'),
-('DK02', 'Giờ giới nghiêm', 'Ký túc xá đóng cửa lúc 23h00 mỗi ngày');
-
-INSERT INTO LoaiThietBi VALUES 
-('LTB01', 'Giường tầng sắt', 1500000, 'Không chạy nhảy trên giường'),
-('LTB02', 'Tủ lạnh mini', 3000000, 'Thường xuyên vệ sinh xả đá'),
-('LTB03', 'Máy lạnh Daikin 1HP', 8000000, 'Chỉ mở 26 độ trở lên');
-
--- 2. Dữ liệu Phòng và Giường
-INSERT INTO Phong VALUES 
-('P101', 'Phòng 4 người', 4, 6000000, 'Còn trống', 'Khu A', 'Nam', 'CN01'),
-('P102', 'Phòng 2 người', 2, 4000000, 'Đang thuê', 'Khu B', 'Nữ', 'CN01'),
-('P103', 'Phòng 4 người', 4, 6000000, 'Bảo trì', 'Khu A', 'Nam', 'CN01');
-
-INSERT INTO Phong_DieuKienThue VALUES 
-('P101', 'DK01'), ('P101', 'DK02'),
-('P102', 'DK01');
-
-INSERT INTO Giuong VALUES 
+INSERT INTO Giuong (MaGiuong, GiaThueGiuong, TrangThai, MaPhong) VALUES 
+-- Giường P101 (Nam - Trống hết)
 ('G101_1', 1500000, 'Trống', 'P101'),
 ('G101_2', 1500000, 'Trống', 'P101'),
 ('G101_3', 1500000, 'Trống', 'P101'),
 ('G101_4', 1500000, 'Trống', 'P101'),
-('G102_1', 2000000, 'Đã thuê', 'P102'),
-('G102_2', 2000000, 'Đã thuê', 'P102');
 
--- 3. Dữ liệu Quy trình Đăng ký & Đặt Cọc (Khách KH01 muốn thuê phòng P102)
-INSERT INTO PhieuDangKy VALUES 
-('PDK01', 1, '2026-05-15', 'Chờ xác nhận', 'Ở ghép', '2026-05-01', 'Khu B', 'KH01', 'NV01');
+-- Giường P102 (Nữ - Có 2 người đang ở, dư 2 chỗ)
+('G102_1', 1500000, 'Đang sử dụng', 'P102'),
+('G102_2', 1500000, 'Đang sử dụng', 'P102'),
+('G102_3', 1500000, 'Trống', 'P102'),
+('G102_4', 1500000, 'Trống', 'P102'),
 
-INSERT INTO PhieuDangKy_Phong VALUES ('PDK01', 'P102');
+-- Giường P103 (Nam - Full)
+('G103_1', 2000000, 'Đang sử dụng', 'P103'),
+('G103_2', 2000000, 'Đang sử dụng', 'P103'),
 
-INSERT INTO HoaDonCoc VALUES 
-('HDC01', '2026-05-02', 2000000, 'Đã thanh toán', '2026-05-02 14:30:00', 'PDK01', 'NV03');
+('G201_1', 1500000, 'Trống', 'P201'),
+('G201_2', 1500000, 'Trống', 'P201'),
+('G201_3', 1500000, 'Trống', 'P201'),
+('G201_4', 1500000, 'Trống', 'P201'),
+('G201_5', 1500000, 'Trống', 'P201'),
+('G201_6', 1500000, 'Trống', 'P201')
+ON CONFLICT DO NOTHING;
 
-INSERT INTO ThongTinGD VALUES 
-('GD01', 'CT_MOMO_98765', 2000000, 'Thanh toan coc giuong G102_1', '2026-05-02 14:25:00', 'Chuyển khoản', 'KH01', 'HDC01');
+-- =========================================================================
+-- 4. DỮ LIỆU PHIẾU ĐĂNG KÝ (Test UI Xếp Phòng/Giường)
+-- =========================================================================
+INSERT INTO PhieuDangKy (MaPhieuDK, SoNguoiDuKien, NgayDuKienVao, TrangThai, HinhThucThue, NgayLap, KhuVucMongMuon, MaKhachHang, MaNVSale) VALUES 
+-- Test case 1: Nam, muốn ở ghép -> Cần xếp vào P101
+('PDK001', 1, '2026-06-01', 'Chờ chọn phòng', 'Ở ghép', '2026-05-10', 'Khu A', 'KH001', 'NV01'),
 
--- 4. Dữ liệu Quy trình Hợp Đồng & Bàn Giao
-INSERT INTO HopDong VALUES 
-('HD01', '2026-05-15', 'Hàng tháng', 2000000, '2026-05-15', 'Đang hiệu lực', 'KH01', 'HDC01');
+-- Test case 2: Nữ, đã được xếp vào P102 (Đang sử dụng G102_1 và G102_2)
+('PDK002', 2, '2026-05-15', 'Đã chọn phòng', 'Ở ghép', '2026-05-01', 'Khu B', 'KH002', 'NV01'),
 
-INSERT INTO HopDong_DichVu VALUES 
-('HD01', 'DV01'), ('HD01', 'DV02'), ('HD01', 'DV03');
+-- Test case 3: Nam, đã thuê nguyên phòng P103
+('PDK003', 2, '2026-05-05', 'Đã chọn phòng', 'Thuê nguyên phòng', '2026-05-02', 'Khu A', 'KH003', 'NV01'),
 
-INSERT INTO HopDong_Giuong VALUES 
-('HD01', 'G102_1');
+-- Test case 4: Nữ, đăng ký nguyên phòng 6 người (P201) -> Chờ chọn
+('PDK004', 6, '2026-06-15', 'Chờ chọn phòng', 'Thuê nguyên phòng', '2026-05-12', 'Khu C', 'KH004', 'NV01')
+ON CONFLICT DO NOTHING;
 
-INSERT INTO BienBanBanGiao VALUES 
-('BBBG01', '2026-05-15', 'Đã bàn giao', 'HD01', 'NV02');
+-- =========================================================================
+-- 5. DỮ LIỆU LIÊN KẾT PHÒNG/GIƯỜNG VỚI PHIẾU ĐĂNG KÝ
+-- =========================================================================
+-- Liên kết cho PDK002 (Nữ ở ghép P102)
+INSERT INTO PhieuDangKy_Giuong (MaPhieuDK, MaGiuong) VALUES 
+('PDK002', 'G102_1'),
+('PDK002', 'G102_2')
+ON CONFLICT DO NOTHING;
 
-INSERT INTO TrangThietBi VALUES 
-('TTB01', 'Đang sử dụng tốt', 'LTB01', 'P102'),
-('TTB02', 'Hơi cũ', 'LTB02', 'P102'),
-('TTB03', 'Mới 100%', 'LTB03', 'P102');
+-- Liên kết cho PDK003 (Thuê nguyên phòng P103)
+INSERT INTO PhieuDangKy_Phong (MaPhieuDK, MaPhong) VALUES 
+('PDK003', 'P103')
+ON CONFLICT DO NOTHING;
 
--- 5. Dữ liệu Quy trình Trả Phòng (Giả sử 1 năm sau khách KH01 trả)
-INSERT INTO PhieuDangKyTra VALUES 
-('PT01', '2027-05-01', '2027-05-15', 'Tốt nghiệp', 'Chờ xử lý', 'HD01');
+-- =========================================================================
+-- 6. DỮ LIỆU HÓA ĐƠN CỌC (Để test màn hình tra cứu cọc qua SĐT)
+-- =========================================================================
+INSERT INTO HoaDonCoc (MaHoaDon, NgayLap, SoTienCoc, TrangThai, MaPhieuDK, MaNVKeToan) VALUES 
+-- HDC001: Khách KH001 (0901111111) - Chờ chọn phòng, nhưng đã cọc giữ chỗ
+('HDC001', '2026-05-10', 1000000, 'Đã thanh toán', 'PDK001', 'NV03'),
 
-INSERT INTO PhieuKiemTra VALUES 
-('PKT01', '2027-05-15', 'PT01', 'NV02');
+-- HDC002: Khách KH002 (0902222222) - Đã có phòng P102, cọc 2 giường
+('HDC002', '2026-05-02', 3000000, 'Đã thanh toán', 'PDK002', 'NV03'),
 
-INSERT INTO ChiTietKhauTru VALUES 
-('PKT01', 'Hư hỏng thiết bị', 200000, 'Làm xước cánh tủ lạnh LTB02'),
-('PKT01', 'Tiện ích nợ', 50000, 'Tiền điện tháng cuối');
+-- HDC003: Khách KH003 (0903333333) - Thuê nguyên phòng P103
+('HDC003', '2026-05-03', 4000000, 'Đã thanh toán', 'PDK003', 'NV03'),
 
-INSERT INTO PhieuThanhToan VALUES 
-('PTT01', '2027-05-16', 'Chuyển khoản', 'Đã hoàn tất', 'PKT01', 'NV03');
-
-INSERT INTO BienBanTraPhong VALUES 
-('BBTP01', '2027-05-16', 'PT01');
+-- HDC004: Khách KH004 (0904444444) - Mới đăng ký, chưa cọc xong
+('HDC004', '2026-05-12', 5000000, 'Chờ xác nhận', 'PDK004', NULL)
+ON CONFLICT DO NOTHING;

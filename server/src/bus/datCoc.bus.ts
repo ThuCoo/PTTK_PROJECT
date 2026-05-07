@@ -70,3 +70,52 @@ export async function cancel(id: string) {
 export async function getStats() {
   return DatCocDAO.getStats();
 }
+export async function getDepositInfoByPhone(phone: string) {
+  const data = await DatCocDAO.getByPhone(phone);
+  if (!data) return null;
+
+  return {
+    depositCode: data.ma_hoa_don,
+    customerName: data.ten_khach,
+    room: data.ma_phong || 'Chưa gán',
+    area: data.khu_vuc || 'N/A',
+    numBeds: data.so_nguoi_du_kien || 0,
+    depositAmount: parseFloat(data.so_tien_coc),
+    status: data.trang_thai,
+    depositDate: new Date(data.ngay_lap).toLocaleDateString('vi-VN'),
+    
+    // 👉 ĐƯA MẢNG MEMBERS LÊN FRONTEND
+    members: data.members.map((m: any, index: number) => {
+      // Chuyển ngày sinh từ DB sang YYYY-MM-DD cho input type="date"
+      let formattedDate = '';
+      if (m.ngaysinh) {
+        const d = new Date(m.ngaysinh);
+        formattedDate = d.toISOString().split('T')[0]; // Cắt lấy phần YYYY-MM-DD
+      }
+
+      return {
+        id: index + 1, // ID tăng dần 1, 2, 3... để UI dùng làm key
+        fullName: m.hoten || '',
+        idCard: m.cccd || '',
+        phone: m.sdt || '',
+        dateOfBirth: formattedDate,
+        permanentAddress: m.diachi || '',
+        errors: {}
+      };
+    })
+  };
+}
+export async function saveGroupMembers(maHD: string, members: any[]) {
+  if (!maHD) throw new Error("Mã hóa đơn không hợp lệ");
+  if (!members || members.length === 0) throw new Error("Vui lòng thêm ít nhất 1 thành viên");
+
+  // Validate đảm bảo có CCCD (bắt buộc để tra cứu trùng lặp)
+  for (const m of members) {
+    if (!m.idCard || m.idCard.trim() === '') {
+      throw new Error(`Vui lòng nhập đầy đủ CCCD cho tất cả thành viên để quản lý.`);
+    }
+  }
+
+  await DatCocDAO.saveGroupMembers(maHD, members);
+  return { success: true };
+}

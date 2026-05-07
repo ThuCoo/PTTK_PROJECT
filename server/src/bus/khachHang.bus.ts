@@ -20,6 +20,7 @@ const mapPhieuDangKyToFrontend = (row: any) => ({
   loai_thue: row.hinhthucthue,
   trang_thai: row.trangthai,
   created_at: row.ngaylap,
+  assignedRooms:row.assignedRooms,
 });
 
 export async function getAll(search?: string, trang_thai?: string) {
@@ -68,6 +69,18 @@ export async function getById(id: string) {
 
   const row = result.rows[0];
   if (!row) throw new Error('Không tìm thấy phiếu đăng ký');
+  const bedsResult = await query(
+    `SELECT p.maphong as room, pg.magiuong
+     FROM PhieuDangKy_Giuong pg
+     JOIN Giuong g ON pg.magiuong = g.magiuong
+     JOIN Phong p ON g.maphong = p.maphong
+     WHERE pg.maphieudk = $1`, 
+    [id]
+  );
+  console.log('bed da chon ', bedsResult)
+  // Đính kèm vào kết quả trả về Frontend
+  row.assignedRooms = bedsResult.rows; 
+  
   return mapPhieuDangKyToFrontend(row);
 }
 
@@ -145,63 +158,78 @@ export async function create(data: {
   return getById(result.rows[0].maphieudk);
 }
 export async function update(id: string, data: Partial<any>) {
-  const existing = await getById(id);
-  if (!existing) throw new Error('Không tìm thấy phiếu đăng ký');
+  // 1. Lấy thông tin hiện tại để đảm bảo tồn tại và lấy makhachhang
+  const existingResult = await query(
+    `SELECT makhachhang FROM phieudangky WHERE maphieudk = $1`,
+    [id]
+  );
+  if (existingResult.rows.length === 0) throw new Error('Không tìm thấy phiếu đăng ký');
+  
+  const maKhachHang = existingResult.rows[0].makhachhang;
 
-  const params: any[] = [];
-  let idx = 1;
-  const updates: string[] = [];
+  // 2. Xử lý cập nhật bảng KHACHHANG
+  const khUpdates: string[] = [];
+  const khParams: any[] = [];
+  let khIdx = 1;
 
-  // Update KhachHang fields
   if (data.ho_ten !== undefined) {
-    updates.push(`khachhang.hoten = $${idx++}`);
-    params.push(data.ho_ten);
+    khUpdates.push(`hoten = $${khIdx++}`);
+    khParams.push(data.ho_ten);
   }
   if (data.email !== undefined) {
-    updates.push(`khachhang.email = $${idx++}`);
-    params.push(data.email);
+    khUpdates.push(`email = $${khIdx++}`);
+    khParams.push(data.email);
   }
   if (data.cccd !== undefined) {
-    updates.push(`khachhang.cccd = $${idx++}`);
-    params.push(data.cccd);
+    khUpdates.push(`cccd = $${khIdx++}`);
+    khParams.push(data.cccd);
   }
   if (data.gioi_tinh !== undefined) {
-    updates.push(`khachhang.gioitinh = $${idx++}`);
-    params.push(data.gioi_tinh);
+    khUpdates.push(`gioitinh = $${khIdx++}`);
+    khParams.push(data.gioi_tinh);
   }
 
-  // Update PhieuDangKy fields
+  if (khUpdates.length > 0) {
+    khParams.push(maKhachHang);
+    await query(
+      `UPDATE khachhang SET ${khUpdates.join(', ')} WHERE makhachhang = $${khIdx}`,
+      khParams
+    );
+  }
+
+  // 3. Xử lý cập nhật bảng PHIEUDANGKY
+  const pdkUpdates: string[] = [];
+  const pdkParams: any[] = [];
+  let pdkIdx = 1;
+
   if (data.so_nguoi !== undefined) {
-    updates.push(`phieudangky.songuoidukien = $${idx++}`);
-    params.push(data.so_nguoi);
+    pdkUpdates.push(`songuoidukien = $${pdkIdx++}`);
+    pdkParams.push(data.so_nguoi);
   }
   if (data.ngay_vao !== undefined) {
-    updates.push(`phieudangky.ngaydukenVao = $${idx++}`);
-    params.push(data.ngay_vao);
+    pdkUpdates.push(`ngaydukenVao = $${pdkIdx++}`);
+    pdkParams.push(data.ngay_vao);
   }
   if (data.loai_thue !== undefined) {
-    updates.push(`phieudangky.hinhthucthue = $${idx++}`);
-    params.push(data.loai_thue);
+    pdkUpdates.push(`hinhthucthue = $${pdkIdx++}`);
+    pdkParams.push(data.loai_thue);
   }
   if (data.khu_vuc !== undefined) {
-    updates.push(`phieudangky.khuvucmongmuon = $${idx++}`);
-    params.push(data.khu_vuc);
+    pdkUpdates.push(`khuvucmongmuon = $${pdkIdx++}`);
+    pdkParams.push(data.khu_vuc);
   }
   if (data.trang_thai !== undefined) {
-    updates.push(`phieudangky.trangthai = $${idx++}`);
-    params.push(data.trang_thai);
+    pdkUpdates.push(`trangthai = $${pdkIdx++}`);
+    pdkParams.push(data.trang_thai);
   }
 
-  if (updates.length === 0) return getById(id);
-
-  params.push(id);
-  await query(
-    `UPDATE phieudangky 
-     JOIN khachhang ON phieudangky.makhachhang = khachhang.makhachhang
-     SET ${updates.join(', ')}
-     WHERE phieudangky.maphieudk = $${idx}`,
-    params
-  );
+  if (pdkUpdates.length > 0) {
+    pdkParams.push(id);
+    await query(
+      `UPDATE phieudangky SET ${pdkUpdates.join(', ')} WHERE maphieudk = $${pdkIdx}`,
+      pdkParams
+    );
+  }
 
   return getById(id);
 }

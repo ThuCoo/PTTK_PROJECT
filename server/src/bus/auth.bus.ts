@@ -8,11 +8,14 @@ const JWT_EXPIRES = '24h';
 
 export async function login(username: string, password: string): Promise<{ token: string; user: User }> {
   const userRow = await UserDAO.findByUsername(username);
+
   if (!userRow) {
     throw new Error('Tên đăng nhập hoặc mật khẩu không đúng');
   }
+    
 
   const valid = await bcrypt.compare(password, userRow.password_hash);
+  console.log('tpod ang nhap roi ' ,password, '-',userRow.password_hash);
   if (!valid) {
     throw new Error('Tên đăng nhập hoặc mật khẩu không đúng');
   }

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { CheckCircle, Bed, Users, MapPin, DollarSign, X, Home, Info, Trash2 } from 'lucide-react';
 import { phongApi,khachHangApi } from '../../services/api';
-import { useQuery } from '@tanstack/react-query';
+// import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query'; // Thêm useQueryClient
 
 // const initialRoomsData = [
 //   {
@@ -218,19 +219,33 @@ export function RoomSelection() {
   const [selectedBeds, setSelectedBeds] = useState<any[]>([]);
   const [registrationDataState, setRegistrationDataState] = useState<any[]>([]);
   const [roomsFormatted, setRoomsFormatted] = useState<any[]>([]);
-  
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const queryClient = useQueryClient();
   const { data: registrationData = [] } = useQuery({
     queryKey: ['khachHang'],
     queryFn: () => khachHangApi.getAll(),
   });
-
+   const { data: detailData, isLoading: isLoadingDetail } = useQuery({
+    queryKey: ['khachHangDetail', selectedId],
+    queryFn: () => khachHangApi.getById(selectedId!),
+    enabled: !!selectedId // Chỉ chạy api này khi selectedId có dữ liệu
+  });
   const { data: phongPhuHop = [], isLoading: isLoadingPhong } = useQuery({
     queryKey: ['phong-phu-hop', selectedRegistration?.id],
     queryFn: () => phongApi.findPhuHop(selectedRegistration.id),
     enabled: !!selectedRegistration?.id && showRoomList
   });
 
+  useEffect(() => {
+    if (detailData) {
+      setSelectedRegistration((prev: any) => ({
+        ...prev,
+        ...detailData // Ghi đè dữ liệu mới nhất (có assignedRooms) vào state hiện tại
+      }));
+    }
+  }, [detailData]);
   // Initialize state with assignedRooms when data loads
+
   useEffect(() => {
     const dataWithAssignments = (registrationData as any[]).map(reg => ({
       ...reg,
@@ -239,8 +254,12 @@ export function RoomSelection() {
     setRegistrationDataState(dataWithAssignments);
   }, [registrationData]);
 
-  // Map API phòng data to UI format
-  useEffect(() => {
+    useEffect(() => {
+    if (!phongPhuHop || phongPhuHop.length === 0) {
+      setRoomsFormatted([]);
+      return;
+    }
+
     const mapped = (phongPhuHop as any[]).map(p => ({
       id: p.maphong,
       name: p.maphong,
@@ -252,64 +271,73 @@ export function RoomSelection() {
       occupied: parseInt(p.tong_giuong) - parseInt(p.giuong_trong),
       floor: parseInt(p.maphong.substring(1, 2)) || 1,
       amenities: [],
-      beds: Array.from({ length: parseInt(p.tong_giuong) }, (_, i) => ({
-        id: i + 1,
-        status: i < parseInt(p.giuong_trong) ? 'Trống' : 'Đang sử dụng',
+      // SỬA TẠI ĐÂY: Dùng trực tiếp p.beds từ API
+      beds: p.beds ? p.beds.map((b: any) => ({
+        id: b.id,
+        magiuong: b.magiuong, // Dữ liệu thật từ DB (G101_1, G101_2...)
+        status: b.status,
         occupant: null
-      }))
+      })) : []
     }));
+    
     setRoomsFormatted(mapped);
   }, [phongPhuHop]);
-  // console.log( 'ans ',khachHangApi.getAll())
+ 
 
-  // Cập nhật occupant trong dữ liệu phòng khi có thay đổi assignment
-  // useEffect(() => {
-  //   const updatedRooms = JSON.parse(JSON.stringify(initialRoomsData));
+  // ✅ CẬP NHẬT TRẠNG THÁI GIƯỜNG khi có sự thay đổi assignedRooms
+  useEffect(() => {
+    setRoomsFormatted(prevRooms =>
+      prevRooms.map(room => ({
+        ...room,
+        beds: room.beds.map((bed: any) => {
+          // Kiểm tra xem giường này có được assign cho ai không
+          const isAssigned = registrationDataState.some(reg => 
+            reg.assignedRooms?.some((assignment: any) => 
+              assignment.room === room.name && assignment.bed === bed.id
+            )
+          );
 
-  //   registrationData.forEach(reg => {
-  //     reg.assignedRooms.forEach((assignment: any) => {
-  //       const room = updatedRooms.find((r: any) => r.name === assignment.room);
-  //       if (room && assignment.bed) {
-  //         const bed = room.beds.find((b: any) => b.id === assignment.bed);
-  //         if (bed) {
-  //           bed.status = 'Đang sử dụng';
-  //           bed.occupant = reg.customer;
-  //         }
-  //       }
-  //     });
-  //   });
+          return {
+            ...bed,
+            // Nếu giường được assign → "Đang sử dụng", ngược lại giữ nguyên
+            status: isAssigned ? 'Đang sử dụng' : bed.status,
+            // Có thể thêm occupant từ khách hàng nếu cần
+          };
+        })
+      }))
+    );
+  }, [registrationDataState]);
 
-  //   setRoomsData(updatedRooms);
-  // }, [registrationData]);
-
-  const handleSelectRoom = (room: any) => {
+    const handleSelectRoom = async (room: any) => { // Thêm async
+    // Các dòng setSelectedRoom(room); setSelectedBeds([]); giữ nguyên
     setSelectedRoom(room);
     setSelectedBeds([]);
 
     if (selectedRegistration.loai_thue === 'Thuê nguyên phòng') {
-      const newAssignment = {
-        room: room.name,
-        bed: null
-      };
-
-      setRegistrationDataState(prevData =>
-        prevData.map(reg => {
-          if (reg.id === selectedRegistration.id) {
-            const updatedReg = {
-              ...reg,
-              assignedRooms: [newAssignment],
-              trang_thai: 'Đã chọn phòng'
-            };
-            setSelectedRegistration(updatedReg);
-            return updatedReg;
-          }
-          return reg;
-        })
+      const confirm = window.confirm(
+        `Bạn có chắc chắn muốn xếp nguyên phòng ${room.name} cho khách hàng này?`
       );
 
-      alert(`Đã chọn nguyên phòng ${room.name} cho ${selectedRegistration.so_nguoi} người`);
-      setShowRoomList(false);
-      setShowBedSelection(false);
+      if (confirm) {
+        try {
+          // 👇 GỌI API BACKEND ĐỂ XỬ LÝ
+          await phongApi.assignWholeRoom(selectedRegistration.id, room.id);
+
+          // 👇 LÀM MỚI DỮ LIỆU ĐỂ UI CẬP NHẬT CHÍNH XÁC
+          await queryClient.invalidateQueries({ queryKey: ['khachHangDetail', selectedRegistration.id] });
+          await queryClient.invalidateQueries({ queryKey: ['khachHang'] });
+          
+          alert(`Đã chọn nguyên phòng ${room.name} cho ${selectedRegistration.so_nguoi} người thành công!`);
+          
+          // Đóng các màn hình phụ
+          setShowRoomList(false);
+          setShowBedSelection(false);
+          
+        } catch (error: any) {
+          console.error("Lỗi khi xếp phòng:", error);
+          alert(error.response?.data?.error || "Đã xảy ra lỗi, vui lòng thử lại!");
+        }
+      }
     } else {
       setShowBedSelection(true);
     }
@@ -318,70 +346,122 @@ export function RoomSelection() {
   const handleToggleBed = (bed: any) => {
     if (bed.status !== 'Trống') return;
 
-    const existing = selectedBeds.find(b => b === bed.id);
+    const existing = selectedBeds.find((b: any) => b.magiuong === bed.magiuong);
     if (existing) {
-      setSelectedBeds(selectedBeds.filter(b => b !== bed.id));
+      setSelectedBeds(selectedBeds.filter((b: any) => b.magiuong !== bed.magiuong));
     } else {
       const totalSelected = (selectedRegistration.assignedRooms?.length || 0) + selectedBeds.length;
       if (totalSelected >= selectedRegistration.so_nguoi) {
         alert('Đã đủ số lượng giường cho khách hàng');
         return;
       }
-      setSelectedBeds([...selectedBeds, bed.id]);
+      setSelectedBeds([...selectedBeds, { id: bed.id, magiuong: bed.magiuong }]);
     }
   };
 
-  const handleConfirmBeds = () => {
+  const handleConfirmBeds = async () => {
     if (selectedBeds.length === 0) {
       alert('Vui lòng chọn ít nhất 1 giường');
       return;
     }
 
-    const newAssignments = selectedBeds.map(bedId => ({
+    const newAssignments = selectedBeds.map((bed: any) => ({
       room: selectedRoom.name,
-      bed: bedId
+      magiuong: bed.magiuong
     }));
 
-    setRegistrationDataState(prevData =>
-      prevData.map(reg => {
-        if (reg.id === selectedRegistration.id) {
-          const updatedRooms = [...(reg.assignedRooms || []), ...newAssignments];
-          const updatedReg = {
-            ...reg,
-            assignedRooms: updatedRooms,
-            trang_thai: updatedRooms.length >= reg.so_nguoi ? 'Đã chọn phòng' : 'Chờ chọn phòng'
-          };
-          setSelectedRegistration(updatedReg);
-          return updatedReg;
-        }
-        return reg;
-      })
-    );
+    try {
+      // ✅ Step 1: Chuẩn bị dữ liệu
+      const updatedRooms = [...(selectedRegistration.assignedRooms || []), ...newAssignments];
+      const payload = {
+        assignedRooms: updatedRooms,
+        trang_thai: updatedRooms.length >= selectedRegistration.so_nguoi ? 'Đã chọn phòng' : 'Chờ chọn phòng'
+      };
+      
+      // ✅ Step 2: GỌI API CẬP NHẬT KHÁCH HÀNG
+      await khachHangApi.update(selectedRegistration.id, payload);
 
-    alert(`Đã chọn ${selectedBeds.length} giường trong phòng ${selectedRoom.name}`);
+      // ✅ Step 3: GỌI API CẬP NHẬT PHÒNG/GIƯỜNG
+      await phongApi.updateAssignedBeds(selectedRegistration.id,selectedRoom.name, updatedRooms);
 
-    setShowBedSelection(false);
-    setShowRoomList(false);
-    setSelectedRoom(null);
-    setSelectedBeds([]);
+      // ✅ Step 4: CẬP NHẬT STATE LOCAL
+      setRegistrationDataState(prevData =>
+        prevData.map(reg => {
+          if (reg.id === selectedRegistration.id) {
+            const updatedReg = {
+              ...reg,
+              assignedRooms: updatedRooms,
+              trang_thai: payload.trang_thai
+            };
+            setSelectedRegistration(updatedReg);
+            return updatedReg;
+          }
+          return reg;
+        })
+      );
+
+      alert(`Đã chọn ${selectedBeds.length} giường trong phòng ${selectedRoom.name}`);
+
+      // ✅ Step 5: ĐÓNG MODAL
+      setShowBedSelection(false);
+      setShowRoomList(false);
+      setSelectedRoom(null);
+      setSelectedBeds([]);
+    } catch (error) {
+      console.error('Lỗi khi xác nhận giường:', error);
+      alert('Xác nhận thất bại. Vui lòng thử lại!');
+    }
   };
 
-  const handleRemoveAssignment = (index: number) => {
-    setRegistrationDataState(prevData =>
-      prevData.map(reg => {
-        if (reg.id === selectedRegistration.id) {
-          const updatedRooms = (reg.assignedRooms || []).filter((_: any, i: number) => i !== index);
-          const updatedReg = {
-            ...reg,
-            assignedRooms: updatedRooms,
-            trang_thai: updatedRooms.length >= reg.so_nguoi ? 'Đã chọn phòng' : 'Chờ chọn phòng'
-          };
-          setSelectedRegistration(updatedReg);
-          return updatedReg;
-        }
-        return reg;
-      })
-    );
+  const handleRemoveAssignment = async (index: number, assignment: any) => {
+    // 1. Xác nhận với người dùng
+    const confirmMessage = assignment.magiuong 
+      ? `Bạn có chắc chắn muốn hủy chọn giường ${assignment.magiuong} tại phòng ${assignment.room}?`
+      : `Bạn có chắc chắn muốn hủy chọn phòng ${assignment.room}?`;
+      
+    if (!window.confirm(confirmMessage)) return;
+
+    try {
+      // 2. Gọi API xóa trong DB
+      // Nếu là thuê nguyên phòng (không có magiuong), bạn cần logic xóa theo phòng (tùy DB của bạn)
+      if (assignment.magiuong) {
+        await phongApi.unassignBed(selectedRegistration.id, assignment.magiuong);
+      }
+       
+      await queryClient.invalidateQueries({ queryKey: ['khachHangDetail', selectedRegistration.id] });
+      await queryClient.invalidateQueries({ queryKey: ['khachHang'] }); // Làm tươi cả danh sách bên trái
+
+      // 3. Sau khi DB xóa thành công, tiến hành cập nhật State Local (Code cũ của bạn)
+      setRegistrationDataState(prevData =>
+        prevData.map(reg => {
+          if (reg.id === selectedRegistration.id) {
+            // Lọc bỏ phần tử tại index đang xóa  
+            const updatedRooms = (reg.assignedRooms || []).filter((_: any, i: number) => i !== index);
+            
+            const updatedReg = {
+              ...reg,
+              assignedRooms: updatedRooms,
+              trang_thai: updatedRooms.length >= reg.so_nguoi ? 'Đã chọn phòng' : 'Chờ chọn phòng'
+            };
+
+            // Cập nhật State khách hàng đang được xem chi tiết
+            setSelectedRegistration(updatedReg);
+
+            // 4. (Quan trọng) Cập nhật lại trạng thái Phiếu đăng ký trong DB sang "Chờ chọn phòng" 
+            // nếu số giường đã chọn < số người đăng ký
+            khachHangApi.update(reg.id, { trang_thai: updatedReg.trang_thai });
+
+            return updatedReg;
+          }
+          return reg;
+        })
+      );
+
+      alert('Hủy chọn giường thành công!');
+    } catch (error) {
+      console.error('Lỗi khi hủy giường:', error);
+      alert('Không thể hủy giường. Vui lòng thử lại!');
+    }
   };
 
   const getAvailableBeds = (room: any) => {
@@ -416,6 +496,8 @@ export function RoomSelection() {
                 <button
                   key={reg.id}
                   onClick={() => {
+                     if (selectedId === reg.id) return; 
+                    setSelectedId(reg.id); 
                     setSelectedRegistration(reg);
                     setShowRoomList(false);
                     setShowBedSelection(false);
@@ -495,29 +577,34 @@ export function RoomSelection() {
                   </div>
                 </div>
 
-                {selectedRegistration.assignedRooms?.length > 0 && (
-                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <div className="flex items-start justify-between mb-3">
-                      <h3 className="font-medium text-green-900">Đã chọn phòng/giường</h3>
-                      <CheckCircle className="w-5 h-5 text-green-600" />
-                    </div>
-                    <div className="space-y-2">
-                      {selectedRegistration.assignedRooms.map((assignment: any, index: number) => (
-                        <div key={index} className="flex items-center justify-between bg-white rounded-lg px-3 py-2">
-                          <span className="text-sm font-medium text-green-700">
-                            {assignment.bed ? `${assignment.room}/${assignment.bed}` : assignment.room}
-                          </span>
-                          <button
-                            onClick={() => handleRemoveAssignment(index)}
-                            className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
+               {selectedRegistration?.assignedRooms?.length > 0 && (
+                <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-start justify-between mb-3">
+                    <h3 className="font-medium text-green-900">Đã chọn phòng/giường</h3>
+                    <CheckCircle className="w-5 h-5 text-green-600" />
                   </div>
-                )}
+                  
+                  <div className="space-y-2">
+                    {selectedRegistration.assignedRooms.map((assignment: any, index: number) => (
+                      <div key={index} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-green-100">
+                        <span className="text-sm font-medium text-green-700">
+                          {/* Logic nguyên bản của bạn: Có giường thì hiện Phòng/Giường, không thì hiện tên Phòng */}
+                          {assignment.magiuong ? `Phòng ${assignment.room} / ${assignment.magiuong}` : `Phòng ${assignment.room}`}
+                        </span>
+                        
+                        <button
+                          // Truyền nguyên object assignment vào để hàm xử lý biết là đang xóa giường nào trong DB
+                          onClick={() => handleRemoveAssignment(index, assignment)}  
+                          className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                          title="Xóa lựa chọn này"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
                 {(!selectedRegistration.assignedRooms || selectedRegistration.assignedRooms.length === 0) && (
                   <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
@@ -691,12 +778,12 @@ export function RoomSelection() {
               <div className="grid grid-cols-3 gap-4">
                 {selectedRoom.beds.map((bed: any) => (
                   <button
-                    key={bed.id}
+                    key={bed.magiuong}
                     onClick={() => handleToggleBed(bed)}
                     disabled={bed.status !== 'Trống'}
                     className={`p-6 border-2 rounded-lg transition-colors ${
                       bed.status === 'Trống'
-                        ? selectedBeds.includes(bed.id)
+                        ? selectedBeds.some((b: any) => b.magiuong === bed.magiuong)
                           ? 'border-blue-500 bg-blue-50'
                           : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50'
                         : 'border-slate-200 bg-slate-100 cursor-not-allowed opacity-60'
@@ -705,15 +792,16 @@ export function RoomSelection() {
                     <div className="flex items-center justify-center mb-3">
                       <Bed className={`w-12 h-12 ${
                         bed.status === 'Trống'
-                          ? selectedBeds.includes(bed.id)
+                          ? selectedBeds.some((b: any) => b.magiuong === bed.magiuong)
                             ? 'text-blue-600'
                             : 'text-green-600'
                           : 'text-slate-400'
                       }`} />
                     </div>
                     <h4 className="text-lg font-bold text-slate-900 text-center mb-2">
-                      Giường {bed.id}
+                      {bed.magiuong}
                     </h4>
+                    <p className="text-xs text-slate-500 text-center mb-2">(Giường {bed.id})</p>
                     <p className={`text-sm text-center ${
                       bed.status === 'Trống' ? 'text-green-600' : 'text-slate-600'
                     }`}>

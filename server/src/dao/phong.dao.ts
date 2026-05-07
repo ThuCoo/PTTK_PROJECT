@@ -93,7 +93,7 @@ export async function findPhongPhuHop(maPhieuDK: string): Promise<any[]> {
   if (phieuResult.rows.length === 0) return [];
   
   const { hinhthucthue, songuoidukien, khuvucmongmuon, gioitinh } = phieuResult.rows[0];
-  console.log('Toi day roi ne1')
+  
   // Query phòng với thông tin giường
   let sql = `
     SELECT 
@@ -122,8 +122,27 @@ export async function findPhongPhuHop(maPhieuDK: string): Promise<any[]> {
   
   const result = await query(sql, params);
   
+  // Lấy chi tiết giường cho từng phòng
+  const roomsWithBeds = await Promise.all(
+    result.rows.map(async (room: any) => {
+      const bedsResult = await query(
+        `SELECT magiuong, trangthai FROM giuong WHERE maphong = $1 ORDER BY magiuong`,
+        [room.maphong]
+      );
+      console.log('bed ne ',bedsResult)
+      return {
+        ...room,
+        beds: bedsResult.rows.map((bed: any, index: number) => ({
+          id: index + 1, // Thứ tự (1, 2, 3...)
+          magiuong: bed.magiuong, // ✅ Mã giường thực (G101_1, G101_2...)
+          status: bed.trangthai
+        }))
+      };
+    })
+  );
+  
   // Sắp xếp theo similarity với khuvucmongmuon + tên phòng
-  const sorted = result.rows.sort((a, b) => {
+  const sorted = roomsWithBeds.sort((a, b) => {
     // Ưu tiên 1: khu vực match
     const simA = calculateSimilarity(a.khuvuc || '', khuvucmongmuon || '');
     const simB = calculateSimilarity(b.khuvuc || '', khuvucmongmuon || '');
@@ -133,6 +152,107 @@ export async function findPhongPhuHop(maPhieuDK: string): Promise<any[]> {
     // Ưu tiên 2: tên phòng (A->Z)
     return a.maphong.localeCompare(b.maphong);
   });
-  console.log('ans ne ',sorted)
+  console.log('ans ne ')
+  console.dir(sorted, { depth: null });
   return sorted;
+}
+
+// ✅ Cập nhật giường được chọn
+export async function updateAssignedBeds(
+  maPhieuDK: string,
+  maPhong: string,
+  assignedBeds: Array<{ magiuong: string }>
+): Promise<any> {
+  try {
+
+    // Update những giường được chọn thành 'Đang sử dụng'
+    for (const assignment of assignedBeds) {
+      if (assignment.magiuong) {
+        await query(
+          `UPDATE giuong SET trangthai = 'Đang sử dụng' 
+           WHERE maphong = $1 AND magiuong = $2`,
+          [maPhong, assignment.magiuong]
+        );
+        await query(
+          `INSERT INTO PhieuDangKy_Giuong (MaPhieuDK, MaGiuong) 
+           VALUES ($1, $2)
+           ON CONFLICT (MaPhieuDK, MaGiuong) DO NOTHING`,
+          [maPhieuDK, assignment.magiuong]
+        );
+      }
+    }
+
+    // Return phòng cập nhật
+    const result = await query(
+      `SELECT * FROM phong WHERE maphong = $1`,
+      [maPhong]
+    );
+    console.log('query giuong ',result)
+    return result.rows[0];
+  } catch (error: any) {
+    throw new Error(`Lỗi cập nhật giường: ${error.message}`);
+  }
+}
+export async function unassignBed(maPhieuDK: string, maGiuong: string) {
+  try {
+    await query('BEGIN', []);
+
+    // 1. Xóa liên kết trong bảng trung gian
+    await query(
+      `DELETE FROM PhieuDangKy_Giuong WHERE MaPhieuDK = $1 AND MaGiuong = $2`,
+      [maPhieuDK, maGiuong]
+    );
+
+    // 2. Cập nhật giường thành 'Trống'
+    await query(
+      `UPDATE giuong SET trangthai = 'Trống' WHERE magiuong = $1`,
+      [maGiuong]
+    );
+
+    await query('COMMIT', []);
+    return { success: true };
+  } catch (error) {
+    await query('ROLLBACK', []);
+    throw error;
+  }
+}
+// Thêm hàm này vào file dao
+export async function assignWholeRoom(maPhieuDK: string, maPhong: string) {
+  try {
+    await query('BEGIN', []);
+
+    // 1. Lấy danh sách tất cả các giường của phòng này
+    const bedsResult = await query(`SELECT MaGiuong FROM Giuong WHERE MaPhong = $1`, [maPhong]);
+    const allBeds = bedsResult.rows;
+    if (allBeds.length === 0) throw new Error("Phòng này chưa được setup giường");
+
+    // 2. Liên kết phiếu đăng ký với phòng
+    await query(
+      `INSERT INTO PhieuDangKy_Phong (MaPhieuDK, MaPhong) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+      [maPhieuDK, maPhong]
+    );
+
+    // 3. Liên kết phiếu đăng ký với TẤT CẢ giường của phòng đó
+    for (const bed of allBeds) {
+      await query(
+        `INSERT INTO PhieuDangKy_Giuong (MaPhieuDK, MaGiuong) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+        [maPhieuDK, bed.magiuong]
+      );
+    }
+    
+    // 4. Cập nhật trạng thái của tất cả giường thành 'Đang sử dụng'
+    await query(`UPDATE Giuong SET TrangThai = 'Đang sử dụng' WHERE MaPhong = $1`, [maPhong]);
+    
+    // 5. Cập nhật trạng thái của phòng thành 'Hết chỗ'
+    await query(`UPDATE Phong SET TrangThai = 'Hết chỗ' WHERE MaPhong = $1`, [maPhong]);
+
+    // 6. Cập nhật trạng thái phiếu đăng ký thành 'Đã chọn phòng'
+    await query(`UPDATE PhieuDangKy SET TrangThai = 'Đã chọn phòng' WHERE MaPhieuDK = $1`, [maPhieuDK]);
+
+    await query('COMMIT', []);
+    return true;
+  } catch (error) {
+    await query('ROLLBACK', []);
+    throw error;
+  }
 }

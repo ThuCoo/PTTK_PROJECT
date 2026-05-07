@@ -50,7 +50,7 @@ export const khachHangApi = {
 updateStatus: (id: number, trang_thai: string) =>
     api.patch(`/khach-hang/${id}/status`, { trang_thai }).then(r => r.data.data),
 };
-
+// export const giuong
 // ─── Rooms ───────────────────────────────────────────────────────────────────
 export const phongApi = {
   getAll: (params?: { khu_vuc?: string; trang_thai?: string; search?: string }) =>
@@ -58,7 +58,15 @@ export const phongApi = {
   getById: (id: number) => api.get(`/phong/${id}`).then(r => r.data.data),
   getStats: () => api.get('/phong/stats').then(r => r.data.data),
   findPhuHop: (maPhieuDK: string) =>
-    api.get(`/phong/phu-hop/${maPhieuDK}`).then(r => r.data.data),
+    api.get(`/phong/phu-hop/${maPhieuDK}`).then(r => r.data.data),  // ✅ API cập nhật giường được chọn
+  updateAssignedBeds: (maphieu:string, maphong: string, assignedBeds: any[]) =>
+    api.put(`/phong/${maphong}`, { assignedRooms: assignedBeds ,maPhieu:maphieu}).then(r => r.data),
+  unassignBed: (maPhieuDK: string, maGiuong: string) => 
+      api.delete(`/phong/unassign-bed`, { 
+        data: { maPhieuDK, maGiuong } // Axios yêu cầu dùng { data: ... } cho DELETE body
+      }).then(r => r.data.data),
+   assignWholeRoom: (maPhieuDK: string, maPhong: string) =>
+    api.post('/phong/assign-whole-room', { maPhieuDK, maPhong }).then(r => r.data),
 };
 
 // ─── Appointments ────────────────────────────────────────────────────────────
@@ -83,19 +91,28 @@ export const datCocApi = {
     api.post(`/dat-coc/${id}/upload`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data),
   confirm: (id: number) => api.post(`/dat-coc/${id}/confirm`).then(r => r.data),
   reject: (id: number, ghi_chu: string) => api.post(`/dat-coc/${id}/reject`, { ghi_chu }).then(r => r.data),
+  getByPhone:(id:string)=> api.get(`/dat-coc/phone/${id}`).then(r=>r.data.data),
+  saveMembers: (maHD: string, members: any[]) =>
+    api.post(`/dat-coc/${maHD}/members`, { members }).then(r => r.data.data),
 };
 
 // ─── Contracts ───────────────────────────────────────────────────────────────
+// export const hopDongApi = {
+//   getAll: (params?: { search?: string; trang_thai?: string }) =>
+//     api.get('/hop-dong', { params }).then(r => r.data.data),
+//   getById: (id: number) => api.get(`/hop-dong/${id}`).then(r => r.data.data),
+//   getStats: () => api.get('/hop-dong/stats').then(r => r.data.data),
+//   create: (data: any) => api.post('/hop-dong', data).then(r => r.data.data),
+//   sign: (id: number) => api.post(`/hop-dong/${id}/sign`).then(r => r.data),
+//   terminate: (id: number) => api.post(`/hop-dong/${id}/terminate`).then(r => r.data),
+//   addMembers: (id: number, members: any[]) =>
+//     api.post(`/hop-dong/${id}/members`, { members }).then(r => r.data),
+// };
 export const hopDongApi = {
-  getAll: (params?: { search?: string; trang_thai?: string }) =>
-    api.get('/hop-dong', { params }).then(r => r.data.data),
-  getById: (id: number) => api.get(`/hop-dong/${id}`).then(r => r.data.data),
-  getStats: () => api.get('/hop-dong/stats').then(r => r.data.data),
-  create: (data: any) => api.post('/hop-dong', data).then(r => r.data.data),
-  sign: (id: number) => api.post(`/hop-dong/${id}/sign`).then(r => r.data),
-  terminate: (id: number) => api.post(`/hop-dong/${id}/terminate`).then(r => r.data),
-  addMembers: (id: number, members: any[]) =>
-    api.post(`/hop-dong/${id}/members`, { members }).then(r => r.data),
+  getAllPending: () => api.get('/hop-dong/pending').then(r => r.data.data),
+  getOrCreate: (depositCode: string) => api.post('/hop-dong/get-or-create', { depositCode }).then(r => r.data.data),
+  confirm: (contractId: string) => api.post(`/hop-dong/${contractId}/confirm`).then(r => r.data),
+  cancel: (contractId: string) => api.post(`/hop-dong/${contractId}/cancel`).then(r => r.data),
 };
 
 // ─── Payments ────────────────────────────────────────────────────────────────

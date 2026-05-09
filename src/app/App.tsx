@@ -1,21 +1,23 @@
-import { useState } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { AuthProvider, useAuth } from '../contexts/AuthContext';
-import { Login } from './components/Login';
-import { Sidebar } from './components/Sidebar';
-import { Dashboard } from './components/Dashboard';
-import { CustomerManagement } from './components/CustomerManagement';
-import { RoomManagement } from './components/RoomManagement';
-import { RoomSelection } from './components/RoomSelection';
-import { AvailabilityVerification } from './components/AvailabilityVerification';
-import { CheckInProcess } from './components/CheckInProcess';
-import { CheckOutProcess } from './components/CheckOutProcess';
-import { AppointmentManagement } from './components/AppointmentManagement';
-import { DepositManagement } from './components/DepositManagement';
-import { ContractManagement } from './components/ContractManagement';
-import { PaymentManagement } from './components/PaymentManagement';
-import { Reports } from './components/Reports';
-import { Settings } from './components/Settings';
+import { useState } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { AuthProvider, useAuth } from "../contexts/AuthContext";
+import { Login } from "./components/Login";
+import { Sidebar } from "./components/Sidebar";
+import { Dashboard } from "./components/Dashboard";
+import { CustomerManagement } from "./components/CustomerManagement";
+import { RoomManagement } from "./components/RoomManagement";
+import { RoomSelection } from "./components/RoomSelection";
+import { AvailabilityVerification } from "./components/AvailabilityVerification";
+import { CheckInProcess } from "./components/CheckInProcess";
+import { CheckOutProcess } from "./components/CheckOutProcess";
+import { RoomReturnProcess } from "./components/RoomReturnProcess";
+import { PreRentalReview } from "./components/PreRentalReview";
+import { AppointmentManagement } from "./components/AppointmentManagement";
+import { DepositManagement } from "./components/DepositManagement";
+import { ContractManagement } from "./components/ContractManagement";
+import { PaymentManagement } from "./components/PaymentManagement";
+import { Reports } from "./components/Reports";
+import { Settings } from "./components/Settings";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -29,7 +31,7 @@ const queryClient = new QueryClient({
 
 function AppContent() {
   const { user, logout, isLoading } = useAuth();
-  const [activeSection, setActiveSection] = useState('dashboard');
+  const [activeSection, setActiveSection] = useState("dashboard");
 
   if (isLoading) {
     return (
@@ -46,25 +48,43 @@ function AppContent() {
 
   const renderContent = () => {
     switch (activeSection) {
-      case 'dashboard':      return <Dashboard />;
-      case 'customers':      return <CustomerManagement />;
-      case 'rooms':          return <RoomManagement />;
-      case 'roomSelection':  return <RoomSelection />;
-      case 'availability':   return <AvailabilityVerification />;
-      case 'checkin':        return <CheckInProcess />;
-      case 'checkout':       return <CheckOutProcess />;
-      case 'appointments':   return <AppointmentManagement />;
-      case 'deposits':       return <DepositManagement />;
-      case 'contracts':      return <ContractManagement />;
-      case 'payments':       return <PaymentManagement />;
-      case 'reports':        return <Reports />;
-      case 'settings':       return <Settings />;
-      default:               return <Dashboard />;
+      case "dashboard":
+        return <Dashboard />;
+      case "customers":
+        return <CustomerManagement />;
+      case "rooms":
+        return <RoomManagement />;
+      case "roomSelection":
+        return <RoomSelection />;
+      case "availability":
+        return <AvailabilityVerification />;
+      case "checkin":
+        return <CheckInProcess />;
+      case "checkout":
+        return <CheckOutProcess />;
+      case "roomReturn":
+        return <RoomReturnProcess />;
+      case "preRentalReview":
+        return <PreRentalReview />;
+      case "appointments":
+        return <AppointmentManagement />;
+      case "deposits":
+        return <DepositManagement />;
+      case "contracts":
+        return <ContractManagement />;
+      case "payments":
+        return <PaymentManagement />;
+      case "reports":
+        return <Reports />;
+      case "settings":
+        return <Settings />;
+      default:
+        return <Dashboard />;
     }
   };
 
   return (
-    <div className="flex h-screen bg-slate-100">
+    <div className="flex h-screen overflow-hidden bg-[#eef3f8] text-slate-900">
       <Sidebar
         activeSection={activeSection}
         onSectionChange={setActiveSection}
@@ -72,6 +92,13 @@ function AppContent() {
         onLogout={logout}
       />
       <main className="flex-1 overflow-y-auto">{renderContent()}</main>
+      <button
+        type="button"
+        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-white text-[26px] font-semibold text-slate-700 shadow-[0_12px_30px_rgba(15,23,42,0.18)] transition hover:text-[#1f63ff]"
+        aria-label="Trợ giúp"
+      >
+        ?
+      </button>
     </div>
   );
 }

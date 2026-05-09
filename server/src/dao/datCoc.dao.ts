@@ -2,60 +2,41 @@ import { query } from '../db';
 import { DatCoc } from '../types';
 import { generateNextCode } from '../utils/generateCode';
 
-export async function getAll(search?: string, trangThai?: string): Promise<DatCoc[]> {
+export async function getAll(
+  search?: string,
+  trangThai?: string,
+): Promise<DatCoc[]> {
   let sql = `
-    SELECT 
-      h.ma_hoa_don as ma_hoa_don,
-      h.ngay_lap as ngay_lap,
-      h.so_tien_coc as so_tien_coc,
-      h.trang_thai as trang_thai,
-      h.thoi_gian_coc as thoi_gian_coc,
-      h.ma_phieu_dk as ma_phieu_dk,
-      h.ma_nv_ke_toan as ma_nv_ke_toan,
-      pdk.ma_khach_hang as ma_khach_hang,
-      k.ho_ten as ten_khach,
-      k.sdt as phone_khach,
-      pdk_p.ma_phong as ma_phong
-    FROM hoa_don_coc h
-    LEFT JOIN phieu_dang_ky pdk ON h.ma_phieu_dk = pdk.ma_phieu_dk
-    LEFT JOIN khach_hang k ON pdk.ma_khach_hang = k.ma_khach_hang
-    LEFT JOIN phieu_dang_ky_phong pdk_p ON pdk.ma_phieu_dk = pdk_p.ma_phieu_dk
+    SELECT d.*, k.ho_ten as ten_khach, k.sdt as phone_khach, p.ma_phong
+    FROM dat_coc d
+    LEFT JOIN khach_hang k ON d.ma_khach_hang = k.ma_khach_hang
+    LEFT JOIN phong p ON d.ma_phong = p.ma_phong
     WHERE 1=1
   `;
   const params: any[] = [];
   let idx = 1;
   if (search) {
-    sql += ` AND (h.ma_hoa_don ILIKE $${idx} OR k.ho_ten ILIKE $${idx} OR k.sdt ILIKE $${idx})`;
-    params.push(`%${search}%`); idx++;
+    sql += ` AND (d.ma_coc ILIKE $${idx} OR k.ho_ten ILIKE $${idx} OR k.phone ILIKE $${idx})`;
+    params.push(`%${search}%`);
+    idx++;
   }
   if (trangThai) {
     sql += ` AND h.trang_thai = $${idx++}`;
     params.push(trangThai);
   }
-  sql += ' ORDER BY h.ngay_lap DESC';
+  sql += " ORDER BY d.ngay_tao DESC";
+  // Exclude encrypted image data from list view for performance
   const result = await query(sql, params);
-  return result.rows;
+  return result.rows.map((r) => ({ ...r, anh_chung_tu_encrypted: undefined }));
 }
 
 export async function getById(id: string): Promise<DatCoc | null> {
   const result = await query(
-    `SELECT 
-      h.ma_hoa_don as ma_hoa_don,
-      h.ngay_lap as ngay_lap,
-      h.so_tien_coc as so_tien_coc,
-      h.trang_thai as trang_thai,
-      h.thoi_gian_coc as thoi_gian_coc,
-      h.ma_phieu_dk as ma_phieu_dk,
-      h.ma_nv_ke_toan as ma_nv_ke_toan,
-      pdk.ma_khach_hang as ma_khach_hang,
-      k.ho_ten as ten_khach,
-      k.sdt as phone_khach,
-      pdk_p.ma_phong as ma_phong
-     FROM hoa_don_coc h
-     LEFT JOIN phieu_dang_ky pdk ON h.ma_phieu_dk = pdk.ma_phieu_dk
-     LEFT JOIN khach_hang k ON pdk.ma_khach_hang = k.ma_khach_hang
-     LEFT JOIN phieu_dang_ky_phong pdk_p ON pdk.ma_phieu_dk = pdk_p.ma_phieu_dk
-     WHERE h.ma_hoa_don = $1`,
+    `SELECT d.*, k.ho_ten as ten_khach, k.phone as phone_khach, p.ma_phong
+     FROM dat_coc d
+     LEFT JOIN khach_hang k ON d.khach_hang_id = k.id
+     LEFT JOIN phong p ON d.phong_id = p.id
+     WHERE d.id = $1`,
     [id]
   );
   return result.rows[0] || null;
@@ -103,23 +84,11 @@ export async function getByPhone(phone: string): Promise<any | null> {
 }
 export async function getByMaCoc(maCoc: string): Promise<DatCoc | null> {
   const result = await query(
-    `SELECT 
-      h.ma_hoa_don as ma_hoa_don,
-      h.ngay_lap as ngay_lap,
-      h.so_tien_coc as so_tien_coc,
-      h.trang_thai as trang_thai,
-      h.thoi_gian_coc as thoi_gian_coc,
-      h.ma_phieu_dk as ma_phieu_dk,
-      h.ma_nv_ke_toan as ma_nv_ke_toan,
-      pdk.ma_khach_hang as ma_khach_hang,
-      k.ho_ten as ten_khach,
-      k.sdt as phone_khach,
-      pdk_p.ma_phong as ma_phong
-     FROM hoa_don_coc h
-     LEFT JOIN phieu_dang_ky pdk ON h.ma_phieu_dk = pdk.ma_phieu_dk
-     LEFT JOIN khach_hang k ON pdk.ma_khach_hang = k.ma_khach_hang
-     LEFT JOIN phieu_dang_ky_phong pdk_p ON pdk.ma_phieu_dk = pdk_p.ma_phieu_dk
-     WHERE h.ma_hoa_don = $1 OR k.sdt = $1`,
+    `SELECT d.*, k.ho_ten as ten_khach, k.phone as phone_khach, p.ma_phong, k.so_nguoi as num_people
+     FROM dat_coc d
+     LEFT JOIN khach_hang k ON d.khach_hang_id = k.id
+     LEFT JOIN phong p ON d.phong_id = p.id
+     WHERE d.ma_coc = $1 OR k.phone = $1`,
     [maCoc]
   );
   return result.rows[0] || null;
@@ -133,39 +102,41 @@ export async function create(data: {
   MaNVKeToan: string;
 }): Promise<DatCoc> {
   const result = await query(
-    `INSERT INTO hoa_don_coc (ma_hoa_don, ngay_lap, so_tien_coc, trang_thai, thoi_gian_coc, ma_phieu_dk, ma_nv_ke_toan)
-     VALUES ($1, $2, $3, 'Chờ thanh toán', NOW(), $4, $5) RETURNING ma_hoa_don as MaHoaDon, ngay_lap as NgayLap, so_tien_coc as SoTienCoc, trang_thai as TrangThai, thoi_gian_coc as ThoiGianCoc, ma_phieu_dk as MaPhieuDK, ma_nv_ke_toan as MaNVKeToan`,
-    [data.MaHoaDon, data.NgayLap, data.SoTienCoc, data.MaPhieuDK, data.MaNVKeToan]
+    `INSERT INTO dat_coc (ma_coc, khach_hang_id, phong_id, so_giuong, so_tien, han_thanh_toan)
+     VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+    [data.ma_coc, data.khach_hang_id, data.phong_id, data.so_giuong, data.so_tien, data.han_thanh_toan]
   );
   return result.rows[0];
 }
 
-export async function uploadProof(id: string, phuongThuc: string): Promise<void> {
+export async function uploadProof(id: number, encryptedData: string, mimeType: string, phuongThuc: string): Promise<void> {
   await query(
-    `UPDATE hoa_don_coc SET trang_thai='Chờ xác nhận' WHERE ma_hoa_don=$1`,
-    [id]
+    `UPDATE dat_coc SET anh_chung_tu_encrypted=$1, mime_type=$2, phuong_thuc=$3, trang_thai='Chờ xác nhận' WHERE id=$4`,
+    [encryptedData, mimeType, phuongThuc, id]
   );
 }
 
 export async function confirm(id: string): Promise<void> {
   await query(
-    `UPDATE hoa_don_coc SET trang_thai='Đã xác nhận' WHERE ma_hoa_don=$1`,
-    [id]
+    `UPDATE dat_coc SET trang_thai='Đã xác nhận', nguoi_xac_nhan=$1, ngay_xac_nhan=NOW() WHERE id=$2`,
+    [nguoiXacNhan, id]
   );
 }
 
 export async function reject(id: string): Promise<void> {
   await query(
-    `UPDATE hoa_don_coc SET trang_thai='Chờ thanh toán' WHERE ma_hoa_don=$1`,
-    [id]
+    `UPDATE dat_coc SET trang_thai='Chờ thanh toán', ghi_chu=$1,
+     anh_chung_tu_encrypted=NULL, mime_type=NULL WHERE id=$2`,
+    [ghiChu, id]
   );
 }
 
 export async function cancel(id: string): Promise<void> {
   await query(
-    `UPDATE hoa_don_coc SET trang_thai='Đã hủy' WHERE ma_hoa_don=$1`,
+    `UPDATE dat_coc SET trang_thai='Đã hủy (quá hạn)' WHERE id=$1`,
     [id]
   );
+  return result.rows;
 }
 
 export async function getStats(): Promise<Record<string, number>> {
@@ -175,14 +146,17 @@ export async function getStats(): Promise<Record<string, number>> {
        COUNT(*) FILTER (WHERE trang_thai = 'Chờ thanh toán') as cho_thanh_toan,
        COUNT(*) FILTER (WHERE trang_thai = 'Chờ xác nhận') as cho_xac_nhan,
        COUNT(*) FILTER (WHERE trang_thai = 'Đã xác nhận') as da_xac_nhan
-     FROM hoa_don_coc`
+     FROM dat_coc`
   );
   const r = result.rows[0];
   return {
-    tong:             parseInt(r.tong, 10),
-    cho_thanh_toan:   parseInt(r.cho_thanh_toan, 10),
-    cho_xac_nhan:     parseInt(r.cho_xac_nhan, 10),
-    da_xac_nhan:      parseInt(r.da_xac_nhan, 10),
+    tong: parseInt(r.tong, 10),
+    cho_thanh_toan: parseInt(r.cho_thanh_toan, 10),
+    dang_xu_ly: parseInt(r.dang_xu_ly, 10),
+    khong_hop_le: parseInt(r.khong_hop_le, 10),
+    da_xac_nhan: parseInt(r.da_xac_nhan, 10),
+    qua_han: parseInt(r.qua_han, 10),
+    hoan_tien: parseInt(r.hoan_tien, 10),
   };
 }
 export async function saveGroupMembers(maHD: string, members: any[]) {

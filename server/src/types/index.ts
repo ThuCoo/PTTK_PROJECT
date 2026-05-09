@@ -3,61 +3,63 @@ export interface User {
   id: number;
   username: string;
   ho_ten: string;
-  role: 'nhan_vien' | 'quan_ly';
+  role: "nhan_vien" | "quan_ly";
   email?: string;
 }
 
 export interface JwtPayload {
   userId: number;
   username: string;
-  role: 'nhan_vien' | 'quan_ly';
+  role: "nhan_vien" | "quan_ly";
 }
 
 // ─── Room ────────────────────────────────────────────────────────────────────
 export interface Phong {
-  maphong: string;
-  loaiphong: string;
-  succhuatoida: number;
-  giathuephong: number;
-  trangthai: string;
-  khuvuc: string;
-  gioitinhapdung: string;
-  machinhang?: string;
-  tong_giuong?: number;
-  giuong_trong?: number;
-}
-
-export interface Giuong {
-  magiuong: string;
-  giathueggiuong: number;
-  trangthai: string;
-  maphong: string;
+  ma_phong: string;
+  khu_vuc: string;
+  loai_phong: string;
+  suc_chua_toi_da: number;
+  suc_chua?: number; // Backwards compat alias
+  dang_o?: number;
+  gia_thue_phong: number;
+  gia_thue?: number; // Backwards compat alias
+  gioi_tinh_ap_dung?: "Nam" | "Nữ";
+  trang_thai: string;
 }
 
 // ─── Customer ────────────────────────────────────────────────────────────────
 export interface KhachHang {
-  makhachhang: string;
-  hoten: string;
-  sdt: string;
-  cccd?: string;
-  gioitinh: string;
+  ma_khach_hang: string;
+  ho_ten: string;
+  sdt?: string;
+  phone?: string; // Backwards compat alias
   email?: string;
   assignedRooms?: Array<{ room: string; bed: number | null }>;
+  cccd?: string;
+  gioi_tinh?: "Nam" | "Nữ";
+  so_nguoi?: number;
+  khu_vuc?: string;
+  loai_phong?: string;
+  khoang_gia?: string;
+  ngay_vao?: string;
+  thoi_han_thue?: number;
+  ghi_chu?: string;
+  loai_thue?: string;
   trang_thai?: string;
+  created_at?: string;
 }
 
 // ─── Appointment ─────────────────────────────────────────────────────────────
 export interface LichXemPhong {
-  id: number;
-  khach_hang_id: number;
-  phong_id?: number;
+  ma_lich?: string;
+  ma_khach_hang: string;
+  ma_phong?: string;
   thoi_gian: string;
-  trang_thai: string;
+  trang_thai?: string;
   ghi_chu?: string;
   // Joined fields
   ten_khach?: string;
   phone_khach?: string;
-  ma_phong?: string;
 }
 
 // ─── Registration ────────────────────────────────────────────────────────
@@ -75,26 +77,59 @@ export interface PhieuDangKy {
 }
 
 // ─── Deposit ─────────────────────────────────────────────────────────────────
-export interface HoaDonCoc {
-  mahoadon: string;
-  ngaylap: string;
-  sotienCoc: number;
-  trangthai: string;
-  thoigian_coc: string;
-  maphieudk: string;
-  manvkeToan?: string;
+export interface DatCoc {
+  ma_coc: string;
+  ma_khach_hang: string;
+  ma_phong: string;
+  khach_hang_id?: string; // Backwards compat alias
+  phong_id?: string; // Backwards compat alias
+  so_giuong: number;
+  so_tien: number;
+  ngay_tao: string;
+  han_thanh_toan?: string;
+  trang_thai:
+    | "Chờ thanh toán"
+    | "Đang xử lý"
+    | "Chờ xác nhận"
+    | "Không hợp lệ"
+    | "Đã xác nhận"
+    | "Hoàn tiền"
+    | "Quá hạn thanh toán"
+    | "Đã hủy (quá hạn)";
+  phuong_thuc?: string;
+  anh_chung_tu_encrypted?: string;
+  nguoi_xac_nhan?: string;
+  ngay_xac_nhan?: string;
+  ghi_chu?: string;
+  // Joined fields
+  ten_khach?: string;
+  phone_khach?: string;
 }
 
 // ─── Contract ────────────────────────────────────────────────────────────────
 export interface HopDong {
-  mahopdong: string;
-  ngaynhanphong: string;
-  kythanhtoan: string;
-  tienbangiao: number;
-  ngaylap: string;
-  trangthai: string;
-  makhachhang: string;
-  mahoadon: string;
+  ma_hop_dong: string;
+  ma_khach_hang: string;
+  ma_phong: string;
+  khach_hang_id?: string; // Backwards compat alias
+  phong_id?: string; // Backwards compat alias
+  so_giuong?: number;
+  ngay_bat_dau?: string;
+  ngay_ket_thuc?: string;
+  gia_thue_moi_giuong?: number;
+  tong_tien_thue?: number;
+  tien_coc?: number;
+  trang_thai?:
+    | "Chờ ký"
+    | "Đang hiệu lực"
+    | "Đã kết thúc"
+    | "Đã hủy"
+    | "Đã thanh lý";
+  ngay_ky?: string;
+  ngay_tra_thuc_te?: string;
+  // Joined fields
+  ten_khach?: string;
+  phone_khach?: string;
 }
 
 // ─── Check-in group member ────────────────────────────────────────────────────
@@ -109,13 +144,23 @@ export interface ThanhVienNhom {
 }
 
 // ─── Payment ─────────────────────────────────────────────────────────────────
-export interface PhieuThanhToan {
-  maphieutt: string;
-  ngaylap: string;
-  hinhthuc: string;
-  trangthai: string;
-  maphieukt: string;
-  manvkeToan?: string;
+export interface ThanhToan {
+  ma_thanh_toan: string;
+  ma_phieu?: string;
+  ma_hop_dong: string;
+  thang?: string;
+  tien_thue?: number;
+  tien_dien?: number;
+  tien_nuoc?: number;
+  phi_xe?: number;
+  tong_tien?: number;
+  han_thanh_toan?: string;
+  ngay_thanh_toan?: string;
+  phuong_thuc?: string;
+  trang_thai?: "Chưa thanh toán" | "Đã thanh toán" | "Quá hạn";
+  // Joined fields
+  ten_khach?: string;
+  ma_phong?: string;
 }
 
 // ─── API Response helpers ────────────────────────────────────────────────────

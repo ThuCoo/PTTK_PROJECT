@@ -62,6 +62,13 @@ export async function updateStatus(id: string, trangThai: string): Promise<void>
   await query('UPDATE phong SET trang_thai = $1 WHERE ma_phong = $2', [trangThai, id]);
 }
 
+export async function incrementOccupied(maPhong: string, delta: number): Promise<void> {
+  await query(
+    `UPDATE phong SET dang_o = GREATEST(0, LEAST(suc_chua_toi_da, dang_o + $1)) WHERE ma_phong = $2`,
+    [delta, maPhong]
+  );
+}
+
 export async function getStats(): Promise<{ tong: number; dang_thue: number; trong: number }> {
   const result = await query(
     `SELECT

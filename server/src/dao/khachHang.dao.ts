@@ -198,10 +198,14 @@ export async function create(data: {
   email: string;
 }): Promise<KhachHang> {
   const result = await query(
-    `INSERT INTO khach_hang (ma_khach_hang, ho_ten, sdt, cccd, gioi_tinh, email)
-     VALUES ($1, $2, $3, $4, $5, $6)
-     RETURNING ma_khach_hang as makhachhang, ho_ten as hoten, sdt, cccd, gioi_tinh as gioitinh, email, ngay_sinh as ngaysinh, dia_chi as diachi`,
-    [data.makhachhang, data.hoten, data.sdt, data.cccd, data.gioitinh, data.email]
+    `INSERT INTO khach_hang
+     (ma_phieu, ho_ten, phone, email, cccd, gioi_tinh, so_nguoi, khu_vuc, loai_phong,
+      khoang_gia, ngay_vao, thoi_han_thue, ghi_chu, loai_thue, trang_thai)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+     RETURNING *`,
+    [data.ma_phieu, data.ho_ten, data.phone, data.email, data.cccd, data.gioi_tinh,
+     data.so_nguoi, data.khu_vuc, data.loai_phong, data.khoang_gia, data.ngay_vao,
+     data.thoi_han_thue, data.ghi_chu, data.loai_thue, data.trang_thai]
   );
   return result.rows[0];
 }
@@ -229,6 +233,10 @@ export async function update(makhachhang: string, data: Partial<KhachHang>): Pro
     [makhachhang, ...values]
   );
   return result.rows[0] || null;
+}
+
+export async function updateStatus(maKhachHang: string, trangThai: string): Promise<void> {
+  await query('UPDATE khach_hang SET trang_thai = $1 WHERE ma_khach_hang = $2', [trangThai, maKhachHang]);
 }
 
 export async function countAll(): Promise<number> {

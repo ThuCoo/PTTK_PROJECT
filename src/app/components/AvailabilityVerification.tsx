@@ -1,458 +1,419 @@
-import { useState } from 'react';
-import { CheckCircle, Circle, XCircle, AlertCircle, FileText, ClipboardCheck } from 'lucide-react';
+import { useMemo, useState } from "react";
+import {
+  Bed,
+  ChevronDown,
+  CheckCircle2,
+  CircleAlert,
+  DollarSign,
+  MapPin,
+  RotateCcw,
+  Users,
+  XCircle,
+} from "lucide-react";
+
+type Registration = {
+  code: string;
+  customer: string;
+  people: number;
+  gender: "Nam" | "Nữ";
+  area: string;
+  roomType: string;
+  priceRange: string;
+  startDate: string;
+  duration: string;
+  note: string;
+  selectedRooms: string[];
+};
+
+type Room = {
+  code: string;
+  area: string;
+  gender: "Nam" | "Nữ";
+  roomType: string;
+  capacity: number;
+  occupied: number;
+  price: string;
+  status: "Đang sử dụng" | "Còn giường" | "Trống" | "Đã cọc";
+};
+
+const registrations: Registration[] = [
+  {
+    code: "PDK001",
+    customer: "Nguyễn Văn A",
+    people: 2,
+    gender: "Nam",
+    area: "Khu A",
+    roomType: "Phòng 4 người",
+    priceRange: "1.500.000 - 2.000.000",
+    startDate: "01/06/2026",
+    duration: "6 tháng",
+    note: "Yên tĩnh, có điều hòa",
+    selectedRooms: ["P301"],
+  },
+  {
+    code: "PDK002",
+    customer: "Trần Thị B",
+    people: 1,
+    gender: "Nữ",
+    area: "Khu B",
+    roomType: "Phòng 2 người",
+    priceRange: "2.000.000 - 3.000.000",
+    startDate: "05/06/2026",
+    duration: "12 tháng",
+    note: "Gần cầu thang, dễ di chuyển",
+    selectedRooms: ["P205/1"],
+  },
+  {
+    code: "PDK003",
+    customer: "Lê Văn C",
+    people: 4,
+    gender: "Nam",
+    area: "Khu A",
+    roomType: "Thuê nguyên phòng",
+    priceRange: "1.200.000 - 1.800.000",
+    startDate: "10/06/2026",
+    duration: "6 tháng",
+    note: "Cần phòng 4 giường, thoáng, có cửa sổ",
+    selectedRooms: ["P412", "P301", "P302"],
+  },
+];
+
+const rooms: Room[] = [
+  {
+    code: "P301",
+    area: "Khu A",
+    gender: "Nam",
+    roomType: "Phòng 4 người",
+    capacity: 4,
+    occupied: 4,
+    price: "1.800.000 VNĐ/tháng",
+    status: "Đang sử dụng",
+  },
+  {
+    code: "P302",
+    area: "Khu A",
+    gender: "Nam",
+    roomType: "Phòng 4 người",
+    capacity: 4,
+    occupied: 2,
+    price: "1.800.000 VNĐ/tháng",
+    status: "Còn giường",
+  },
+  {
+    code: "P205",
+    area: "Khu B",
+    gender: "Nữ",
+    roomType: "Phòng 2 người",
+    capacity: 2,
+    occupied: 0,
+    price: "2.500.000 VNĐ/tháng",
+    status: "Trống",
+  },
+  {
+    code: "P412",
+    area: "Khu A",
+    gender: "Nam",
+    roomType: "Phòng 6 người",
+    capacity: 6,
+    occupied: 0,
+    price: "1.500.000 VNĐ/tháng",
+    status: "Đã cọc",
+  },
+  {
+    code: "P108",
+    area: "Khu C",
+    gender: "Nữ",
+    roomType: "Phòng 2 người",
+    capacity: 2,
+    occupied: 0,
+    price: "2.500.000 VNĐ/tháng",
+    status: "Trống",
+  },
+  {
+    code: "P303",
+    area: "Khu A",
+    gender: "Nam",
+    roomType: "Phòng 4 người",
+    capacity: 4,
+    occupied: 1,
+    price: "1.700.000 VNĐ/tháng",
+    status: "Còn giường",
+  },
+];
+
+function statusStyles(status: Room["status"]) {
+  switch (status) {
+    case "Đang sử dụng":
+      return "bg-[#ddebff] text-[#2f6dff]";
+    case "Còn giường":
+      return "bg-[#fff0b8] text-[#b47a00]";
+    case "Trống":
+      return "bg-[#dff9df] text-[#159a3f]";
+    case "Đã cọc":
+      return "bg-[#f1ddff] text-[#8c3be8]";
+    default:
+      return "bg-slate-100 text-slate-700";
+  }
+}
 
 export function AvailabilityVerification() {
-  const [selectedRegistration, setSelectedRegistration] = useState<any>(null);
-  const [currentStep, setCurrentStep] = useState(1);
-  const [roomStatus, setRoomStatus] = useState('available');
-  const [statusNote, setStatusNote] = useState('');
+  const [selectedCode, setSelectedCode] = useState("PDK003");
 
-  // Danh sách phiếu đăng ký đã chọn phòng và đồng ý thuê
-  const registrations = [
-    {
-      id: 1,
-      code: 'PDK001',
-      customer: 'Nguyễn Văn A',
-      phone: '0901234567',
-      idCard: '001234567890',
-      address: 'Hà Nội',
-      numPeople: 2,
-      gender: 'Nam',
-      area: 'Khu A',
-      room: 'P301',
-      roomType: 'Phòng 4 người',
-      price: 1800000,
-      selectedDate: '28/04/2026',
-      status: 'Đã chọn phòng',
-      currentStep: 1
-    },
-    {
-      id: 2,
-      code: 'PDK002',
-      customer: 'Trần Thị B',
-      phone: '0912345678',
-      idCard: '001234567891',
-      address: 'TP.HCM',
-      numPeople: 1,
-      gender: 'Nữ',
-      area: 'Khu B',
-      room: 'P205',
-      roomType: 'Phòng 2 người',
-      price: 2500000,
-      selectedDate: '30/04/2026',
-      status: 'Đang kiểm tra',
-      currentStep: 2
-    },
-    {
-      id: 3,
-      code: 'PDK003',
-      customer: 'Lê Văn C',
-      phone: '0923456789',
-      idCard: '001234567892',
-      address: 'Đà Nẵng',
-      numPeople: 4,
-      gender: 'Nam',
-      area: 'Khu A',
-      room: 'P412',
-      roomType: 'Phòng 4 người nguyên căn',
-      price: 1500000,
-      selectedDate: '01/05/2026',
-      status: 'Chờ kiểm tra phòng',
-      currentStep: 3
-    },
-  ];
+  const selectedRegistration = useMemo(
+    () =>
+      registrations.find((item) => item.code === selectedCode) ??
+      registrations[0],
+    [selectedCode],
+  );
 
-  const steps = [
-    { id: 1, title: 'Rà soát điều kiện', icon: FileText },
-    { id: 2, title: 'Kiểm tra phòng', icon: ClipboardCheck },
-    { id: 3, title: 'Nhập tình trạng', icon: AlertCircle },
-    { id: 4, title: 'Xác nhận nội quy', icon: CheckCircle },
-  ];
+  const matchingRooms = useMemo(
+    () =>
+      rooms.filter(
+        (room) =>
+          room.gender === selectedRegistration.gender &&
+          room.area === selectedRegistration.area,
+      ),
+    [selectedRegistration],
+  );
 
-  const checkConditions = () => {
-    // Giả lập kiểm tra điều kiện
-    return {
-      gender: true,
-      area: true,
-      capacity: true,
-      documents: true,
-    };
-  };
-
-  const conditions = selectedRegistration ? checkConditions() : null;
+  const compatibleCount = matchingRooms.length;
+  const incompatibleCount = rooms.length - matchingRooms.length;
 
   return (
-    <div className="p-8">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-slate-900">Rà soát và thỏa thuận thuê</h1>
-        <p className="text-slate-600 mt-1">Kiểm tra điều kiện và tình trạng phòng trước khi đặt cọc</p>
+    <div className="min-h-full px-8 py-8">
+      <div className="mb-8">
+        <h1 className="text-[42px] font-extrabold tracking-tight text-[#132238]">
+          Kiểm tra tình trạng và điều kiện
+        </h1>
+        <p className="mt-2 text-[20px] text-slate-600">
+          Tìm kiếm phòng/giường phù hợp với yêu cầu của khách hàng
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Danh sách phiếu đăng ký */}
-        <div className="lg:col-span-1">
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-            <h2 className="text-lg font-bold text-slate-900 mb-4">Phiếu đăng ký chờ xử lý</h2>
-            <div className="space-y-3">
-              {registrations.map((reg) => (
-                <button
-                  key={reg.id}
-                  onClick={() => {
-                    setSelectedRegistration(reg);
-                    setCurrentStep(reg.currentStep);
-                  }}
-                  className={`w-full text-left p-4 border rounded-lg transition-colors ${
-                    selectedRegistration?.id === reg.id
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-slate-200 hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded">
-                        {reg.code}
-                      </span>
-                      <p className="font-medium text-slate-900 mt-1">{reg.customer}</p>
-                      <p className="text-sm text-slate-600">{reg.room} - {reg.area}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-slate-500">{reg.numPeople} người</span>
-                    <span className={`px-2 py-1 rounded-full ${
-                      reg.status === 'Đã chọn phòng' ? 'bg-yellow-100 text-yellow-700' :
-                      reg.status === 'Đang kiểm tra' ? 'bg-blue-100 text-blue-700' :
-                      'bg-orange-100 text-orange-700'
-                    }`}>
-                      {reg.status}
-                    </span>
-                  </div>
-                </button>
-              ))}
+      <div className="rounded-[22px] border border-slate-200 bg-white p-6 shadow-[0_4px_24px_rgba(15,23,42,0.08)]">
+        <div className="flex flex-wrap items-end gap-4">
+          <div className="min-w-[420px] flex-1">
+            <label className="mb-2 block text-[18px] font-semibold text-[#384b66]">
+              Chọn phiếu đăng ký thuê *
+            </label>
+            <div className="relative">
+              <select
+                value={selectedCode}
+                onChange={(e) => setSelectedCode(e.target.value)}
+                className="h-[56px] w-full appearance-none rounded-2xl border border-slate-300 bg-white px-4 pr-12 text-[18px] outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+              >
+                {registrations.map((item) => (
+                  <option key={item.code} value={item.code}>
+                    {item.code} - {item.customer} - {item.people} người -{" "}
+                    {item.gender} - {item.area}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
             </div>
           </div>
+          <button className="h-[56px] rounded-2xl border border-slate-300 bg-white px-8 text-[18px] font-semibold text-slate-700 transition hover:bg-slate-50">
+            Xóa bộ lọc
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-8 rounded-[22px] border border-slate-200 bg-white p-8 shadow-[0_4px_24px_rgba(15,23,42,0.08)]">
+        <h2 className="mb-6 text-[28px] font-extrabold tracking-tight text-[#132238]">
+          Thông tin yêu cầu của khách hàng
+        </h2>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
+          <InfoItem label="Khách hàng" value={selectedRegistration.customer} />
+          <InfoItem
+            label="Số người"
+            value={`${selectedRegistration.people} người`}
+          />
+          <InfoItem label="Giới tính" value={selectedRegistration.gender} />
+          <InfoItem label="Khu vực" value={selectedRegistration.area} />
+          <InfoItem label="Loại phòng" value={selectedRegistration.roomType} />
+          <InfoItem label="Mức giá" value={selectedRegistration.priceRange} />
+          <InfoItem
+            label="Thời gian vào"
+            value={selectedRegistration.startDate}
+          />
+          <InfoItem label="Thời hạn" value={selectedRegistration.duration} />
         </div>
 
-        {/* Quy trình xử lý */}
-        <div className="lg:col-span-2">
-          {!selectedRegistration ? (
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 flex flex-col items-center justify-center text-center">
-              <CheckCircle className="w-16 h-16 text-slate-300 mb-4" />
-              <p className="text-slate-500">Chọn một phiếu đăng ký để bắt đầu kiểm tra</p>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {/* Progress Steps */}
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                <div className="flex items-center justify-between mb-6">
-                  {steps.map((step, index) => {
-                    const Icon = step.icon;
-                    return (
-                      <div key={step.id} className="flex-1 flex items-center">
-                        <div className="flex flex-col items-center">
-                          <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                            currentStep >= step.id ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-400'
-                          }`}>
-                            <Icon className="w-6 h-6" />
-                          </div>
-                          <p className={`text-xs mt-2 text-center ${
-                            currentStep >= step.id ? 'text-slate-900 font-medium' : 'text-slate-500'
-                          }`}>
-                            {step.title}
-                          </p>
-                        </div>
-                        {index < steps.length - 1 && (
-                          <div className={`flex-1 h-1 mx-2 ${
-                            currentStep > step.id ? 'bg-blue-600' : 'bg-slate-200'
-                          }`} />
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Thông tin phiếu đăng ký */}
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                <h2 className="text-xl font-bold text-slate-900 mb-4">Thông tin phiếu đăng ký</h2>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-slate-600">Mã phiếu:</span>
-                    <p className="font-medium text-slate-900">{selectedRegistration.code}</p>
-                  </div>
-                  <div>
-                    <span className="text-slate-600">Khách hàng:</span>
-                    <p className="font-medium text-slate-900">{selectedRegistration.customer}</p>
-                  </div>
-                  <div>
-                    <span className="text-slate-600">CCCD:</span>
-                    <p className="font-medium text-slate-900">{selectedRegistration.idCard}</p>
-                  </div>
-                  <div>
-                    <span className="text-slate-600">Địa chỉ:</span>
-                    <p className="font-medium text-slate-900">{selectedRegistration.address}</p>
-                  </div>
-                  <div>
-                    <span className="text-slate-600">Phòng đã chọn:</span>
-                    <p className="font-medium text-blue-600">{selectedRegistration.room} - {selectedRegistration.area}</p>
-                  </div>
-                  <div>
-                    <span className="text-slate-600">Số người:</span>
-                    <p className="font-medium text-slate-900">{selectedRegistration.numPeople} người</p>
-                  </div>
-                  <div>
-                    <span className="text-slate-600">Giới tính:</span>
-                    <p className="font-medium text-slate-900">{selectedRegistration.gender}</p>
-                  </div>
-                  <div>
-                    <span className="text-slate-600">Giá thuê:</span>
-                    <p className="font-medium text-slate-900">{selectedRegistration.price.toLocaleString()} VNĐ/tháng</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Bước 1: Rà soát điều kiện */}
-              {currentStep === 1 && (
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                  <h2 className="text-xl font-bold text-slate-900 mb-4">Bước 1: Rà soát điều kiện lưu trú</h2>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between p-4 border border-slate-200 rounded-lg">
-                      <span className="text-sm text-slate-700">Giới tính phù hợp với phòng</span>
-                      <CheckCircle className="w-5 h-5 text-green-600" />
-                    </div>
-                    <div className="flex items-center justify-between p-4 border border-slate-200 rounded-lg">
-                      <span className="text-sm text-slate-700">Khu vực phù hợp</span>
-                      <CheckCircle className="w-5 h-5 text-green-600" />
-                    </div>
-                    <div className="flex items-center justify-between p-4 border border-slate-200 rounded-lg">
-                      <span className="text-sm text-slate-700">Số lượng người phù hợp sức chứa</span>
-                      <CheckCircle className="w-5 h-5 text-green-600" />
-                    </div>
-                    <div className="flex items-center justify-between p-4 border border-slate-200 rounded-lg">
-                      <span className="text-sm text-slate-700">Giấy tờ hợp lệ</span>
-                      <CheckCircle className="w-5 h-5 text-green-600" />
-                    </div>
-                  </div>
-                  <div className="mt-6 flex justify-end gap-3">
-                    <button
-                      onClick={() => setCurrentStep(2)}
-                      className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                      Xác nhận đạt điều kiện
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Bước 2: Đã gửi yêu cầu kiểm tra */}
-              {currentStep === 2 && (
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                  <h2 className="text-xl font-bold text-slate-900 mb-4">Bước 2: Gửi yêu cầu kiểm tra tình trạng phòng</h2>
-                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg mb-4">
-                    <p className="text-sm text-blue-800">
-                      Yêu cầu kiểm tra tình trạng phòng <strong>{selectedRegistration.room}</strong> đã được gửi đến quản lý.
-                      Vui lòng chờ quản lý kiểm tra và phản hồi.
-                    </p>
-                  </div>
-                  <div className="flex justify-end gap-3">
-                    <button
-                      onClick={() => setCurrentStep(1)}
-                      className="px-6 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
-                    >
-                      Quay lại
-                    </button>
-                    <button
-                      onClick={() => setCurrentStep(3)}
-                      className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                      Tiếp tục
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Bước 3: Nhập tình trạng phòng */}
-              {currentStep === 3 && (
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                  <h2 className="text-xl font-bold text-slate-900 mb-4">Bước 3: Nhập tình trạng phòng (Quản lý)</h2>
-
-                  <div className="mb-6">
-                    <label className="block text-sm font-medium text-slate-700 mb-3">Tình trạng phòng *</label>
-                    <div className="space-y-3">
-                      <label className="flex items-center p-4 border-2 rounded-lg cursor-pointer transition-colors hover:bg-slate-50">
-                        <input
-                          type="radio"
-                          name="roomStatus"
-                          value="available"
-                          checked={roomStatus === 'available'}
-                          onChange={(e) => setRoomStatus(e.target.value)}
-                          className="w-4 h-4 text-blue-600"
-                        />
-                        <div className="ml-3 flex-1">
-                          <div className="flex items-center gap-2">
-                            <CheckCircle className="w-5 h-5 text-green-600" />
-                            <span className="font-medium text-slate-900">Phòng khả dụng</span>
-                          </div>
-                          <p className="text-sm text-slate-600 mt-1">
-                            Phòng còn trống, tình trạng tốt, sẵn sàng cho khách thuê
-                          </p>
-                        </div>
-                      </label>
-
-                      <label className="flex items-center p-4 border-2 rounded-lg cursor-pointer transition-colors hover:bg-slate-50">
-                        <input
-                          type="radio"
-                          name="roomStatus"
-                          value="unavailable"
-                          checked={roomStatus === 'unavailable'}
-                          onChange={(e) => setRoomStatus(e.target.value)}
-                          className="w-4 h-4 text-red-600"
-                        />
-                        <div className="ml-3 flex-1">
-                          <div className="flex items-center gap-2">
-                            <XCircle className="w-5 h-5 text-red-600" />
-                            <span className="font-medium text-slate-900">Phòng không khả dụng</span>
-                          </div>
-                          <p className="text-sm text-slate-600 mt-1">
-                            Phòng đã được cọc bởi người khác hoặc đang sửa chữa
-                          </p>
-                        </div>
-                      </label>
-                    </div>
-                  </div>
-
-                  <div className="mb-6">
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Ghi chú tình trạng</label>
-                    <textarea
-                      value={statusNote}
-                      onChange={(e) => setStatusNote(e.target.value)}
-                      rows={4}
-                      placeholder="Nhập ghi chú về tình trạng phòng (nếu có)..."
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    ></textarea>
-                  </div>
-
-                  {roomStatus === 'unavailable' && (
-                    <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-                      <div className="flex items-start gap-3">
-                        <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
-                        <div>
-                          <p className="text-sm font-medium text-red-800 mb-1">Lưu ý:</p>
-                          <p className="text-sm text-red-700">
-                            Nếu gửi trạng thái "Không khả dụng", phòng <strong>{selectedRegistration.room}</strong> sẽ được gỡ khỏi phiếu đăng ký này và khách hàng cần chọn phòng khác.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex justify-end gap-3">
-                    <button
-                      onClick={() => setCurrentStep(2)}
-                      className="px-6 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
-                    >
-                      Quay lại
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (roomStatus === 'unavailable') {
-                          alert('Phòng không khả dụng. Hệ thống sẽ gỡ phòng khỏi phiếu đăng ký.');
-                          setSelectedRegistration(null);
-                          setCurrentStep(1);
-                        } else {
-                          setCurrentStep(4);
-                        }
-                      }}
-                      className={`px-6 py-2 rounded-lg transition-colors ${
-                        roomStatus === 'available'
-                          ? 'bg-green-600 text-white hover:bg-green-700'
-                          : 'bg-red-600 text-white hover:bg-red-700'
-                      }`}
-                    >
-                      Gửi tình trạng
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Bước 4: Xác nhận nội quy */}
-              {currentStep === 4 && (
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                  <h2 className="text-xl font-bold text-slate-900 mb-4">Bước 4: Xác nhận đồng ý tuân thủ nội quy</h2>
-
-                  <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <div className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
-                      <div>
-                        <p className="text-sm font-medium text-green-800 mb-1">Phòng khả dụng!</p>
-                        <p className="text-sm text-green-700">
-                          Phòng <strong>{selectedRegistration.room}</strong> đã được xác nhận sẵn sàng cho khách thuê.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mb-6 p-6 border-2 border-slate-300 rounded-lg bg-slate-50">
-                    <h3 className="font-bold text-slate-900 mb-3">Điều kiện thuê và nội quy ký túc xá</h3>
-                    <ul className="space-y-2 text-sm text-slate-700">
-                      <li className="flex items-start gap-2">
-                        <Circle className="w-4 h-4 mt-1 flex-shrink-0" />
-                        <span>Tuân thủ giờ giấc: Giờ vào cổng trước 23:00, giữ yên tĩnh sau 22:00</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <Circle className="w-4 h-4 mt-1 flex-shrink-0" />
-                        <span>Không sử dụng các thiết bị điện công suất lớn (bếp điện, lò vi sóng...)</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <Circle className="w-4 h-4 mt-1 flex-shrink-0" />
-                        <span>Giữ gìn vệ sinh chung, không gây ồn ào ảnh hưởng người khác</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <Circle className="w-4 h-4 mt-1 flex-shrink-0" />
-                        <span>Không chuyển nhượng, cho thuê lại phòng cho người khác</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <Circle className="w-4 h-4 mt-1 flex-shrink-0" />
-                        <span>Thanh toán tiền phòng đúng hạn theo kỳ đã thỏa thuận</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <Circle className="w-4 h-4 mt-1 flex-shrink-0" />
-                        <span>Chịu trách nhiệm bồi thường khi làm hư hỏng tài sản</span>
-                      </li>
-                    </ul>
-                  </div>
-
-                  <div className="mb-6">
-                    <label className="flex items-start gap-3 p-4 border-2 border-blue-500 rounded-lg bg-blue-50 cursor-pointer">
-                      <input type="checkbox" className="w-5 h-5 text-blue-600 mt-0.5" defaultChecked />
-                      <span className="text-sm text-slate-900">
-                        Khách hàng đã đọc, hiểu rõ và đồng ý tuân thủ các điều kiện thuê và nội quy ký túc xá
-                      </span>
-                    </label>
-                  </div>
-
-                  <div className="flex justify-end gap-3">
-                    <button
-                      onClick={() => setCurrentStep(3)}
-                      className="px-6 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
-                    >
-                      Quay lại
-                    </button>
-                    <button
-                      onClick={() => {
-                        alert('Hoàn tất! Phiếu đăng ký sẽ được chuyển sang trang "Đặt cọc".');
-                        setSelectedRegistration(null);
-                        setCurrentStep(1);
-                      }}
-                      className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                    >
-                      Xác nhận hoàn tất
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+        <div className="mt-6 rounded-[18px] border border-[#b6d4ff] bg-[#edf4ff] px-6 py-5">
+          <p className="mb-2 text-[17px] text-slate-600">Yêu cầu khác:</p>
+          <p className="text-[19px] font-semibold text-[#132238]">
+            {selectedRegistration.note}
+          </p>
         </div>
+      </div>
+
+      <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <StatCard
+          icon={CheckCircle2}
+          label="Phòng phù hợp"
+          value={compatibleCount}
+          tone="bg-[#dcf8df] text-[#169a3f]"
+        />
+        <StatCard
+          icon={XCircle}
+          label="Không phù hợp"
+          value={incompatibleCount}
+          tone="bg-[#ffdcdc] text-[#e11b22]"
+        />
+        <StatCard
+          icon={Bed}
+          label="Tổng số phòng"
+          value={rooms.length}
+          tone="bg-[#d8e5ff] text-[#1f63ff]"
+        />
+      </div>
+
+      <div className="mt-8 grid grid-cols-1 gap-6 xl:grid-cols-3">
+        {matchingRooms.map((room) => {
+          const selected = selectedRegistration.selectedRooms.some((value) =>
+            value.includes(room.code),
+          );
+          return (
+            <RoomCard
+              key={room.code}
+              room={room}
+              selected={selected}
+              matching
+            />
+          );
+        })}
+        {rooms
+          .filter(
+            (room) => !matchingRooms.some((match) => match.code === room.code),
+          )
+          .map((room) => (
+            <RoomCard key={room.code} room={room} selected={false} />
+          ))}
+      </div>
+
+      <div className="mt-8 rounded-[22px] border border-slate-200 bg-white px-10 py-14 text-center shadow-[0_4px_24px_rgba(15,23,42,0.08)]">
+        <h2 className="text-[28px] font-extrabold tracking-tight text-[#132238]">
+          Bắt đầu chọn phòng
+        </h2>
+        <p className="mx-auto mt-3 max-w-2xl text-[20px] leading-relaxed text-slate-600">
+          Hệ thống sẽ hiển thị các phòng phù hợp với yêu cầu của khách hàng
+        </p>
+        <button className="mt-8 rounded-2xl bg-[#1f63ff] px-8 py-4 text-[18px] font-semibold text-white transition hover:bg-[#1553df]">
+          Xem danh sách phòng phù hợp
+        </button>
+      </div>
+
+      <button className="fixed bottom-6 right-6 flex h-14 w-14 items-center justify-center rounded-full bg-white text-slate-700 shadow-[0_12px_30px_rgba(15,23,42,0.18)] transition hover:text-[#1f63ff]">
+        <CircleAlert className="h-6 w-6" />
+      </button>
+    </div>
+  );
+}
+
+function InfoItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-[18px] text-slate-600">{label}:</p>
+      <p className="mt-1 text-[20px] font-semibold text-[#132238]">{value}</p>
+    </div>
+  );
+}
+
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  tone,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: number;
+  tone: string;
+}) {
+  return (
+    <div className="rounded-[22px] border border-slate-200 bg-white p-6 shadow-[0_4px_24px_rgba(15,23,42,0.08)]">
+      <div className="flex items-center gap-4">
+        <div
+          className={`flex h-16 w-16 items-center justify-center rounded-2xl ${tone}`}
+        >
+          <Icon className="h-8 w-8" />
+        </div>
+        <div>
+          <p className="text-[18px] text-slate-600">{label}</p>
+          <p className="text-[40px] font-extrabold tracking-tight text-[#132238]">
+            {value}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RoomCard({
+  room,
+  selected,
+  matching,
+}: {
+  room: Room;
+  selected: boolean;
+  matching?: boolean;
+}) {
+  return (
+    <div
+      className={`rounded-[22px] border ${selected ? "border-[#1f63ff]" : matching ? "border-emerald-400" : "border-slate-200"} bg-white shadow-[0_4px_24px_rgba(15,23,42,0.08)]`}
+    >
+      <div
+        className={`rounded-t-[22px] px-5 py-4 ${room.gender === "Nam" ? "bg-[#eaf2ff]" : "bg-[#fdeef6]"}`}
+      >
+        <div className="flex items-center justify-between gap-4">
+          <h3 className="text-[30px] font-extrabold tracking-tight text-[#132238]">
+            {room.code}
+          </h3>
+          <span
+            className={`rounded-full px-4 py-1.5 text-sm font-semibold ${statusStyles(room.status)}`}
+          >
+            {room.status}
+          </span>
+        </div>
+        <div className="mt-3 flex items-center gap-2 text-[18px] text-slate-600">
+          <MapPin className="h-4 w-4" />
+          {room.area} • {room.gender}
+        </div>
+      </div>
+      <div className="space-y-4 px-5 py-5">
+        <div className="flex items-center gap-2 text-[16px] text-slate-700">
+          <Bed className="h-4 w-4" />
+          {room.roomType}
+        </div>
+        <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+          <div className="flex items-center gap-2 text-[16px] text-slate-700">
+            <Users className="h-4 w-4" />
+            Sức chứa
+          </div>
+          <span className="text-[18px] font-bold text-[#132238]">
+            {room.occupied}/{room.capacity} người
+          </span>
+        </div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-[16px] text-slate-700">
+            <DollarSign className="h-4 w-4" />
+            Giá thuê
+          </div>
+          <span className="text-[18px] font-bold text-[#1f63ff]">
+            {room.price}
+          </span>
+        </div>
+        <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-200">
+          <div
+            className={`h-full rounded-full ${room.status === "Trống" ? "bg-emerald-500" : room.status === "Còn giường" ? "bg-amber-500" : room.status === "Đã cọc" ? "bg-purple-500" : "bg-[#1f63ff]"}`}
+            style={{
+              width: `${Math.min((room.occupied / room.capacity) * 100, 100)}%`,
+            }}
+          />
+        </div>
+        <button className="mt-1 w-full rounded-2xl border border-[#2f6dff] px-4 py-3 text-[18px] font-semibold text-[#2f6dff] transition hover:bg-[#f2f6ff]">
+          Xem chi tiết
+        </button>
       </div>
     </div>
   );

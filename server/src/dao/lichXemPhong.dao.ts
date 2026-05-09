@@ -3,10 +3,10 @@ import { LichXemPhong } from '../types';
 
 export async function getAll(date?: string): Promise<LichXemPhong[]> {
   let sql = `
-    SELECT pdk.ma_phieu_dk as MaPhieuDK, pdk.ma_khach_hang as MaKhachHang, pdk.ngay_du_kien_vao as NgayDuKienVao, pdk.trang_thai as TrangThai, pdk.hinh_thuc_thue as HinhThucThue, k.ho_ten as ten_khach, k.sdt as phone_khach, pdk_p.ma_phong as MaPhong
-    FROM phieu_dang_ky pdk
-    LEFT JOIN khach_hang k ON pdk.ma_khach_hang = k.ma_khach_hang
-    LEFT JOIN phieu_dang_ky_phong pdk_p ON pdk.ma_phieu_dk = pdk_p.ma_phieu_dk
+    SELECT l.*, k.ho_ten as ten_khach, k.sdt as phone_khach, p.ma_phong
+    FROM lich_xem_phong l
+    LEFT JOIN khach_hang k ON l.ma_khach_hang = k.ma_khach_hang
+    LEFT JOIN phong p ON l.ma_phong = p.ma_phong
     WHERE 1=1
   `;
   const params: any[] = [];
@@ -21,42 +21,42 @@ export async function getAll(date?: string): Promise<LichXemPhong[]> {
 
 export async function getById(id: string): Promise<LichXemPhong | null> {
   const result = await query(
-    `SELECT pdk.ma_phieu_dk as MaPhieuDK, pdk.ma_khach_hang as MaKhachHang, pdk.ngay_du_kien_vao as NgayDuKienVao, pdk.trang_thai as TrangThai, pdk.hinh_thuc_thue as HinhThucThue, k.ho_ten as ten_khach, k.sdt as phone_khach, pdk_p.ma_phong as MaPhong
-     FROM phieu_dang_ky pdk
-     LEFT JOIN khach_hang k ON pdk.ma_khach_hang = k.ma_khach_hang
-     LEFT JOIN phieu_dang_ky_phong pdk_p ON pdk.ma_phieu_dk = pdk_p.ma_phieu_dk
-     WHERE pdk.ma_phieu_dk = $1`,
+    `SELECT l.*, k.ho_ten as ten_khach, k.sdt as phone_khach, p.ma_phong
+     FROM lich_xem_phong l
+     LEFT JOIN khach_hang k ON l.ma_khach_hang = k.ma_khach_hang
+     LEFT JOIN phong p ON l.ma_phong = p.ma_phong
+     WHERE l.ma_lich = $1`,
     [id]
   );
   return result.rows[0] || null;
 }
 
 export async function create(data: {
-  MaPhieuDK: string;
-  MaKhachHang: string;
-  NgayDuKienVao: Date;
-  KhuVucMongMuon: string;
+  ma_khach_hang: string;
+  ma_phong?: string;
+  thoi_gian: string;
+  ghi_chu?: string;
 }): Promise<LichXemPhong> {
   const result = await query(
-    `INSERT INTO phieu_dang_ky (ma_phieu_dk, ma_khach_hang, ngay_du_kien_vao, khu_vuc_mong_muon, ngay_lap, trang_thai)
-     VALUES ($1, $2, $3, $4, NOW(), 'Chờ xác nhận') RETURNING ma_phieu_dk as MaPhieuDK, ma_khach_hang as MaKhachHang, ngay_du_kien_vao as NgayDuKienVao, trang_thai as TrangThai, hinh_thuc_thue as HinhThucThue`,
-    [data.MaPhieuDK, data.MaKhachHang, data.NgayDuKienVao, data.KhuVucMongMuon]
+    `INSERT INTO lich_xem_phong (ma_lich, ma_khach_hang, ma_phong, thoi_gian, ghi_chu)
+     VALUES (md5(random()::text || clock_timestamp()::text), $1, $2, $3, $4) RETURNING *`,
+    [data.ma_khach_hang, data.ma_phong || null, data.thoi_gian, data.ghi_chu]
   );
   return result.rows[0];
 }
 
-export async function updateStatus(id: string, trangThai: string): Promise<void> {
-  await query('UPDATE phieu_dang_ky SET trang_thai = $1 WHERE ma_phieu_dk = $2', [trangThai, id]);
+export async function updateStatus(maLich: string, trangThai: string): Promise<void> {
+  await query('UPDATE lich_xem_phong SET trang_thai = $1 WHERE ma_lich = $2', [trangThai, maLich]);
 }
 
 export async function getTodayAppointments(): Promise<LichXemPhong[]> {
   const result = await query(
-    `SELECT pdk.ma_phieu_dk as MaPhieuDK, pdk.ma_khach_hang as MaKhachHang, pdk.ngay_du_kien_vao as NgayDuKienVao, pdk.trang_thai as TrangThai, pdk.hinh_thuc_thue as HinhThucThue, k.ho_ten as ten_khach, k.sdt as phone_khach, pdk_p.ma_phong as MaPhong
-     FROM phieu_dang_ky pdk
-     LEFT JOIN khach_hang k ON pdk.ma_khach_hang = k.ma_khach_hang
-     LEFT JOIN phieu_dang_ky_phong pdk_p ON pdk.ma_phieu_dk = pdk_p.ma_phieu_dk
-     WHERE DATE(pdk.ngay_du_kien_vao) = CURRENT_DATE
-     ORDER BY pdk.ngay_du_kien_vao ASC`
+    `SELECT l.*, k.ho_ten as ten_khach, k.sdt as phone_khach, p.ma_phong
+     FROM lich_xem_phong l
+     LEFT JOIN khach_hang k ON l.ma_khach_hang = k.ma_khach_hang
+     LEFT JOIN phong p ON l.ma_phong = p.ma_phong
+     WHERE DATE(l.thoi_gian) = CURRENT_DATE
+     ORDER BY l.thoi_gian ASC`
   );
   return result.rows;
 }

@@ -21,7 +21,7 @@ export async function getAll(
     idx++;
   }
   if (trangThai) {
-    sql += ` AND pt.trang_thai = $${idx++}`;
+    sql += ` AND tt.trang_thai = $${idx++}`;
     params.push(trangThai);
   }
   sql += " ORDER BY tt.created_at DESC";
@@ -29,7 +29,7 @@ export async function getAll(
   return result.rows;
 }
 
-export async function getById(id: string): Promise<ThanhToan | null> {
+export async function getById(id: number): Promise<ThanhToan | null> {
   const result = await query(
     `SELECT tt.*, k.ho_ten as ten_khach, p.ma_phong
      FROM thanh_toan tt
@@ -42,14 +42,29 @@ export async function getById(id: string): Promise<ThanhToan | null> {
   return result.rows[0] || null;
 }
 
+// CREATE TABLE phieu_thanh_toan (
+//     ma_phieu_tt VARCHAR(50) PRIMARY KEY,
+//     ngay_lap DATE,
+//     hinh_thuc VARCHAR(100),
+//     trang_thai VARCHAR(100),
+//     ma_phieu_kt VARCHAR(50),
+//     ma_nv_ke_toan VARCHAR(50),
+//     FOREIGN KEY (ma_phieu_kt) REFERENCES phieu_kiem_tra(ma_phieu_kt),
+//     FOREIGN KEY (ma_nv_ke_toan) REFERENCES nv_ke_toan(ma_nhan_vien)
+// );
 export async function create(data: {
-  MaPhieuTT: string;
-  MaPhieuKT: string;
-  MaNVKeToan: string;
-  HinhThuc: string;
+  ma_phieu: string;
+  hop_dong_id: number;
+  thang: string;
+  tien_thue: number;
+  tien_dien: number;
+  tien_nuoc: number;
+  phi_xe: number;
+  tong_tien: number;
+  han_thanh_toan?: string;
 }): Promise<ThanhToan> {
   const result = await query(
-    `INSERT INTO thanh_toan (ma_thanh_toan, ma_phieu, ma_hop_dong, thang, tien_thue, tien_dien, tien_nuoc, phi_xe, tong_tien, han_thanh_toan)
+    `INSERT INTO phieu_thanh_toan (ma_phieu_tt, ma_phieu, ma_hop_dong, thang, tien_thue, tien_dien, tien_nuoc, phi_xe, tong_tien, han_thanh_toan)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
     [
       data.ma_thanh_toan,
@@ -76,7 +91,7 @@ export async function markPaid(maThanhToan: string, phuongThuc: string): Promise
 
 export async function markOverdue(): Promise<void> {
   await query(
-    `UPDATE phieu_thanh_toan
+    `UPDATE thanh_toan
      SET trang_thai='Quá hạn'
      WHERE trang_thai='Chưa thanh toán' AND han_thanh_toan < CURRENT_DATE`,
   );
@@ -84,25 +99,21 @@ export async function markOverdue(): Promise<void> {
 
 export async function getUnpaidByContract(
   maHopDong: string,
-): Promise<ThanhToan[]> {
+): Promise<ThanhToan[]> { // Giả sử ThanhToan là một interface bạn đã định nghĩa
   const result = await query(
     `SELECT tt.*
-     FROM thanh_toan tt
-     WHERE tt.ma_hop_dong = $1 AND tt.trang_thai IN ('Chưa thanh toán', 'Quá hạn')
-     ORDER BY tt.created_at ASC`,
-    [maHopDong],
-  );
-  return result.rows;
-}
-
-export async function getUnpaidByContract(
-  maHopDong: string,
-): Promise<ThanhToan[]> {
-  const result = await query(
-    `SELECT tt.*
-     FROM thanh_toan tt
-     WHERE tt.ma_hop_dong = $1 AND tt.trang_thai IN ('Chưa thanh toán', 'Quá hạn')
-     ORDER BY tt.created_at ASC`,
+     FROM phieu_thanh_toan tt
+     
+     -- Sửa lại đường JOIN để tìm được mã hợp đồng
+     JOIN phieu_kiem_tra pkt ON tt.ma_phieu_kt = pkt.ma_phieu_kt
+     JOIN phieu_dang_ky_tra pdt ON pkt.ma_phieu_tra = pdt.ma_phieu_tra
+     
+     -- Điều kiện lọc bây giờ sẽ nằm trên bảng phieu_dang_ky_tra
+     WHERE pdt.ma_hop_dong = $1 
+       AND tt.trang_thai IN ('Chưa thanh toán', 'Quá hạn')
+       
+     -- Sửa đổi nhỏ: Sắp xếp theo ngay_lap vì bảng phieu_thanh_toan không có created_at
+     ORDER BY tt.ngay_lap ASC`,
     [maHopDong],
   );
   return result.rows;

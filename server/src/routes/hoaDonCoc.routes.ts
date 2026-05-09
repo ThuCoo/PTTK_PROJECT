@@ -1,11 +1,19 @@
 import { Router, Request, Response } from "express";
 import * as HoaDonCocBUS from "../bus/hoaDonCoc.bus";
 import { authMiddleware, requireQl } from "../middleware/auth";
+import * as datCoc from "../bus/datCoc.bus";
 import { upload } from "../middleware/upload";
 
 const router = Router();
 router.use(authMiddleware);
-
+router.get('/phone/:phone',async (req: Request, res: Response) => {
+  try {
+    const data = await datCoc.getDepositInfoByPhone(req.params.phone);
+    res.json({ success: true, data });
+  } catch (err: any) {
+    res.status(404).json({ success: false, error: err.message });
+  }
+});
 router.get("/", async (req: Request, res: Response) => {
   try {
     const { search, trang_thai } = req.query as Record<string, string>;
@@ -101,6 +109,7 @@ router.post(
 router.post("/:id/confirm", requireQl, async (req: Request, res: Response) => {
   try {
     const nguoiXacNhan = `${req.user!.role === "quan_ly" ? "Quản lý" : "NV"} - ${req.user!.username}`;
+    console.log("Confirming deposit", { id: req.params.id, nguoiXacNhan });
     await HoaDonCocBUS.confirm(req.params.id, nguoiXacNhan);
     res.json({ success: true, message: "Xác nhận đặt cọc thành công" });
   } catch (err: any) {
@@ -135,5 +144,15 @@ router.post("/:id/refund", requireQl, async (req: Request, res: Response) => {
     res.status(400).json({ success: false, error: err.message });
   }
 });
-
+router.post('/:id/members', async (req: Request, res: Response) => {
+  try {
+    const maHD = req.params.id;
+    const { members } = req.body;
+    
+    await datCoc.saveGroupMembers(maHD, members);
+    res.json({ success: true, message: 'Lưu thông tin thành viên thành công' });
+  } catch (err: any) {
+    res.status(400).json({ success: false, error: err.message });
+  }
+});
 export default router;

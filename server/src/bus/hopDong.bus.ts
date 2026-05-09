@@ -109,15 +109,17 @@ export async function addGroupMembers(
   await HopDongDAO.addGroupMembers(hopDongId, members);
 }
 
-export async function roomReturn(id: number, roomReportNotes: string) {
+export async function roomReturn(id: string, roomReportNotes: string) {
   // Step 1: Verify contract exists
+  console.log("Starting room return process for contract ID:", id);
   const hd = await HopDongDAO.getById(id);
   if (!hd) throw new Error("Không tìm thấy hợp đồng");
 
   // Step 2: Verify contract is currently active (Đang hiệu lực)
-  if (hd.trang_thai !== "Đang hiệu lực") {
-    throw new Error("Hợp đồng không ở trạng thái có thể trả phòng");
-  }
+  // console.log('hd ', hd)
+  // if (hd.trang_thai !== "Đang hiệu lực") {
+  //   throw new Error("Hợp đồng không ở trạng thái có thể trả phòng");
+  // }
 
   // Step 3: Check if all payments are completed (A1 - payment not completed)
   // For now, we'll use a simple check - in production, this would verify all invoices are paid
@@ -129,23 +131,19 @@ export async function roomReturn(id: number, roomReportNotes: string) {
   // }
 
   // Step 4: Verify room report exists (A2 - no room report)
-  if (!roomReportNotes || !roomReportNotes.trim()) {
-    throw new Error("Chưa có biên bản trả phòng");
-  }
+  // if (!roomReportNotes || !roomReportNotes.trim()) {
+  //   throw new Error("Chưa có biên bản trả phòng");
+  // }
 
   // Step 5: Update contract status to "Đã thanh lý"
   await HopDongDAO.finalize(id);
 
   // Step 6: Update room/bed status to "Trống" and record checkout time
-  await PhongDAO.incrementOccupied(hd.phong_id, -hd.so_giuong);
-  const phong = await PhongDAO.getById(hd.phong_id);
-  if (phong && phong.dang_o === 0) {
-    await PhongDAO.updateStatus(hd.phong_id, "Trống");
-  }
-
+  
+  await PhongDAO.releaseResources(hd.ma_hop_dong);
   // Step 7: Record checkout time
   const checkoutTime = new Date().toISOString();
-  await HopDongDAO.recordCheckoutTime(id, checkoutTime);
+  // await HopDongDAO.recordCheckoutTime(id, checkoutTime);
 
   return {
     success: true,
@@ -156,6 +154,7 @@ export async function roomReturn(id: number, roomReportNotes: string) {
 }
 
 export async function getReturnReady() {
+  console.log("Fetching contracts ready for return...");
   return HopDongDAO.getByStatus("Đang hiệu lực");
 }
 

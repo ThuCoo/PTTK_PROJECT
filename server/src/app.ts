@@ -13,6 +13,7 @@ import hopDongRoutes from "./routes/hopDong.routes";
 import thanhToanRoutes from "./routes/thanhToan.routes";
 import dashboardRoutes from "./routes/dashboard.routes";
 import dangKyThueRoutes from "./routes/dangKyThue.routes";
+import datcoc from "./routes/datCoc.routes";
 
 const app = express();
 const PORT = process.env.PORT || 3001;

@@ -68,6 +68,76 @@ export async function incrementOccupied(maPhong: string, delta: number): Promise
     [delta, maPhong]
   );
 }
+export async function releaseResources(maHopDong: string): Promise<void> {
+  // 1. Truy xuất thông tin để biết hợp đồng này là "Thuê nguyên phòng" hay "Ở ghép" (Thuê giường)
+  const contractInfo = await query(
+    `SELECT 
+        pdk.hinh_thuc_thue, 
+        pkp.ma_phong
+     FROM hop_dong hd
+     JOIN hoa_don_coc hdc ON hd.ma_hoa_don = hdc.ma_hoa_don
+     JOIN phieu_dang_ky pdk ON hdc.ma_phieu_dk = pdk.ma_phieu_dk
+     LEFT JOIN phieu_dang_ky_phong pkp ON pdk.ma_phieu_dk = pkp.ma_phieu_dk
+     WHERE hd.ma_hop_dong = $1`,
+    [maHopDong]
+  );
+
+  if (contractInfo.rows.length === 0) return; // Không tìm thấy hợp đồng
+  
+  const { hinh_thuc_thue, ma_phong } = contractInfo.rows[0];
+
+  // =========================================================
+  // TRƯỜNG HỢP 1: THUÊ NGUYÊN PHÒNG
+  // =========================================================
+  if (hinh_thuc_thue === 'Thuê nguyên phòng' && ma_phong) {
+    
+    // a. Đặt lại trạng thái cả phòng thành "Còn trống"
+    await query(`UPDATE phong SET trang_thai = 'Còn trống' WHERE ma_phong = $1`, [ma_phong]);
+    
+    // b. Đặt lại trạng thái tất cả các giường trong phòng đó thành "Trống"
+    await query(`UPDATE giuong SET trang_thai = 'Trống' WHERE ma_phong = $1`, [ma_phong]);
+    
+    console.log(`Đã giải phóng toàn bộ phòng ${ma_phong}`);
+
+  } 
+  // =========================================================
+  // TRƯỜNG HỢP 2: Ở GHÉP (THUÊ THEO GIƯỜNG)
+  // =========================================================
+  else {
+    // a. Tìm tất cả các giường mà hợp đồng này đang nắm giữ
+    const beds = await query(
+      `SELECT ma_giuong FROM hop_dong_giuong WHERE ma_hop_dong = $1`, 
+      [maHopDong]
+    );
+
+    if (beds.rows.length > 0) {
+      // Lấy ra mảng các mã giường (VD: ['G101_1', 'G101_2'])
+      const bedIds = beds.rows.map(b => b.ma_giuong);
+      
+      // Tạo chuỗi placeholder $1, $2, $3... cho câu query
+      const placeholders = bedIds.map((_, i) => `$${i + 1}`).join(',');
+
+      // b. Cập nhật các giường đó thành "Trống"
+      await query(
+        `UPDATE giuong SET trang_thai = 'Trống' WHERE ma_giuong IN (${placeholders})`, 
+        bedIds
+      );
+
+      // c. RẤT QUAN TRỌNG: Cập nhật lại trạng thái phòng
+      // Nếu phòng đang "Hết chỗ", khi có người trả giường, phòng phải chuyển thành "Còn trống"
+      await query(
+        `UPDATE phong 
+         SET trang_thai = 'Còn trống' 
+         WHERE ma_phong IN (
+            SELECT DISTINCT ma_phong FROM giuong WHERE ma_giuong IN (${placeholders})
+         )`,
+        bedIds
+      );
+      
+      console.log(`Đã giải phóng các giường: ${bedIds.join(', ')}`);
+    }
+  }
+}
 
 export async function getStats(): Promise<{ tong: number; dang_thue: number; trong: number }> {
   const result = await query(
@@ -201,7 +271,11 @@ export async function updateAssignedBeds(
       `SELECT ma_phong as maphong, loai_phong as loaiphong, suc_chua_toi_da as succhuatoida, gia_thue_phong as giatheuphong, trang_thai as trangthai, khu_vuc as khuvuc, gioi_tinh_ap_dung as gioitinhapdung, ma_chi_nhanh as machinhnanh FROM phong WHERE ma_phong = $1`,
       [maPhong]
     );
-    console.log('query giuong ',result)
+
+    // console.log('query giuong ',result)
+    // await query(
+    //   `UPDATE phieu_dang_ky SET trang_thai = '' WHERE ma_phieu_dk = $1`,
+    // );
     return result.rows[0];
   } catch (error: any) {
     throw new Error(`Lỗi cập nhật giường: ${error.message}`);

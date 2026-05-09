@@ -15,7 +15,14 @@ router.get("/", async (req: Request, res: Response) => {
     res.status(500).json({ success: false, error: err.message });
   }
 });
-
+router.get('/phone/:phone',async (req: Request, res: Response) => {
+  try {
+    const data = await DatCocBUS.getDepositInfoByPhone(req.params.phone);
+    res.json({ success: true, data });
+  } catch (err: any) {
+    res.status(404).json({ success: false, error: err.message });
+  }
+});
 router.get("/stats", async (_req: Request, res: Response) => {
   try {
     res.json({ success: true, data: await DatCocBUS.getStats() });
@@ -140,14 +147,7 @@ router.post("/:id/refund", requireQl, async (req: Request, res: Response) => {
     res.status(400).json({ success: false, error: err.message });
   }
 });
-router.get('/phone/:phone',async (req: Request, res: Response) => {
-  try {
-    const data = await DatCocBUS.getDepositInfoByPhone(req.params.phone);
-    res.json({ success: true, data });
-  } catch (err: any) {
-    res.status(404).json({ success: false, error: err.message });
-  }
-});
+
 router.post('/:id/members', async (req: Request, res: Response) => {
   try {
     const maHD = req.params.id;

@@ -278,7 +278,8 @@ export async function updateStatus(maHopDong: string, trangThai: 'Đang hiệu l
   );
   return { success: true };
 }
-export async function getByPhone(phone: string): Promise<any | null> {
+export async function getByPhone(searchTerm: string): Promise<any | null> {
+  // searchTerm có thể là SĐT hoặc Mã Hóa Đơn
   const result = await query(
     `SELECT 
         h.ma_hoa_don as ma_hoa_don, 
@@ -295,9 +296,9 @@ export async function getByPhone(phone: string): Promise<any | null> {
      JOIN khach_hang k ON pdk.ma_khach_hang = k.ma_khach_hang
      LEFT JOIN phieu_dang_ky_phong pdk_p ON pdk.ma_phieu_dk = pdk_p.ma_phieu_dk
      LEFT JOIN phong p ON pdk_p.ma_phong = p.ma_phong
-     WHERE k.sdt = $1
+     WHERE k.sdt = $1 OR h.ma_hoa_don = $1 -- SỬA LẠI LOGIC TÌM KIẾM Ở ĐÂY
      ORDER BY h.ngay_lap DESC LIMIT 1`,
-    [phone]
+    [searchTerm] // Truyền vào searchTerm
   );
   
   if (result.rows.length === 0) return null;

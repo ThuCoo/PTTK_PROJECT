@@ -4,7 +4,14 @@ import { authMiddleware, requireQl } from "../middleware/auth";
 
 const router = Router();
 router.use(authMiddleware);
-
+router.get('/pending', async (req: Request, res: Response) => {
+  try {
+    const data = await HopDongBUS.getAllPendingContracts();
+    res.json({ success: true, data });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
 router.get("/return-ready", async (_req: Request, res: Response) => {
   try {
     const data = await HopDongBUS.getReturnReady();
@@ -80,7 +87,7 @@ router.post("/:id/room-return", async (req: Request, res: Response) => {
   try {
     const { roomReportNotes } = req.body;
     const result = await HopDongBUS.roomReturn(
-      parseInt(req.params.id),
+      req.params.id,
       roomReportNotes,
     );
     res.json({ success: true, data: result });
@@ -100,14 +107,7 @@ router.post("/:id/members", async (req: Request, res: Response) => {
     res.status(400).json({ success: false, error: err.message });
   }
 });
-router.get('/pending', async (req: Request, res: Response) => {
-  try {
-    const data = await HopDongBUS.getAllPendingContracts();
-    res.json({ success: true, data });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
+
 router.post('/get-or-create', async (req: Request, res: Response) => {
   try {
     const { depositCode } = req.body;

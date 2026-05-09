@@ -4,39 +4,67 @@ import { DatCoc } from "../types";
 export async function getAll(
   search?: string,
   trangThai?: string,
-): Promise<DatCoc[]> {
+){
   let sql = `
     SELECT h.ma_hoa_don as id, h.ma_hoa_don as ma_coc, h.so_tien_coc as so_tien,
-           h.trang_thai as trang_thai, h.thoi_gian_coc as ngay_tao, h.ma_nv_ke_toan as nguoi_xac_nhan,
+           h.trang_thai as trang_thai, h.thoi_gian_coc as ngay_tao, 
            k.ho_ten as ten_khach, k.sdt as phone_khach, p.ma_phong as ma_phong,
-           dk.ma_khach_hang as khach_hang_id, dk.ma_phieu_dk as ma_phieu
+           dk.ma_khach_hang as khach_hang_id, dk.ma_phieu_dk as ma_phieu,
+           
+           -- CÁC TRƯỜNG MỚI ĐƯỢC THÊM VÀO
+           nv.ho_ten as nguoi_xac_nhan,        -- Lấy tên nhân viên thay vì mã
+           tgd.thoi_gian_tt as ngay_xac_nhan,  -- Ngày xác nhận chính là thời gian thanh toán
+           tgd.phuong_thuc_tt as phuong_thuc      -- Lấy phương thức thanh toán
+
     FROM hoa_don_coc h
     LEFT JOIN phieu_dang_ky dk ON h.ma_phieu_dk = dk.ma_phieu_dk
     LEFT JOIN khach_hang k ON dk.ma_khach_hang = k.ma_khach_hang
     LEFT JOIN phieu_dang_ky_phong pkp ON dk.ma_phieu_dk = pkp.ma_phieu_dk
     LEFT JOIN phong p ON pkp.ma_phong = p.ma_phong
+    
+    -- JOIN THÊM 2 BẢNG ĐỂ LẤY THÔNG TIN
+    LEFT JOIN thong_tin_gd tgd ON h.ma_hoa_don = tgd.ma_hoa_don -- Bảng chứa thông tin giao dịch
+    LEFT JOIN nhan_vien nv ON h.ma_nv_ke_toan = nv.ma_nhan_vien -- Bảng chứa tên nhân viên
+
     WHERE 1=1
   `;
   const params: any[] = [];
   let idx = 1;
   if (search) {
-    sql += ` AND (h.MaHoaDon ILIKE $${idx} OR k.HoTen ILIKE $${idx} OR k.Sdt ILIKE $${idx})`;
+    sql += ` AND (h.ma_hoa_don ILIKE $${idx} OR k.ho_ten ILIKE $${idx} OR k.sdt ILIKE $${idx})`;
     params.push(`%${search}%`);
     idx++;
   }
   if (trangThai) {
-    sql += ` AND h.TrangThai = $${idx++}`;
+    sql += ` AND h.trang_thai = $${idx++}`;
     params.push(trangThai);
   }
-  sql += " ORDER BY h.ThoiGianCoc DESC";
+  sql += " ORDER BY h.thoi_gian_coc DESC";
+  var giuongs = await query(`SELECT count(*) as so_giuong, pg.ma_phieu_dk
+     FROM phieu_dang_ky_giuong pg 
+     GROUP BY pg.ma_phieu_dk`);
   const result = await query(sql, params);
+
+  // CẬP NHẬT LẠI OBJECT TRẢ VỀ CHO FRONTEND
   return result.rows.map(r => ({
-      id: r.id, ma_coc: r.ma_coc, khach_hang_id: r.khach_hang_id, phong_id: r.ma_phong,
-      so_giuong: 1,
+      id: r.id, 
+      ma_coc: r.ma_coc, 
+      khach_hang_id: r.khach_hang_id, 
+      phong_id: r.ma_phong,
+      so_giuong: parseInt(giuongs.rows.find((g: any) => g.ma_phieu_dk === r.ma_phieu)?.so_giuong || "0", 10),
       so_tien: parseFloat(r.so_tien),
-      ngay_tao: r.ngay_tao, trang_thai: r.trang_thai,
-      ten_khach: r.ten_khach, phone_khach: r.phone_khach, ma_phong: r.ma_phong,
-      nguoi_xac_nhan: r.nguoi_xac_nhan
+      ngay_tao: r.ngay_tao, 
+      trang_thai: r.trang_thai,
+      ten_khach: r.ten_khach, 
+      phone_khach: r.phone_khach, 
+      ma_phong: r.ma_phong,
+      
+      // Thêm các trường mới vào đây
+      nguoi_xac_nhan: r.nguoi_xac_nhan,
+      ngay_xac_nhan: r.ngay_xac_nhan,
+      phuong_thuc: r.phuong_thuc,
+      // hạn thanh toán là ngày lập + 24h , // xử lí ở đây luôn
+      han_thanh_toan:  new Date(new Date(r.ngay_tao).getTime() + 24 * 60 * 60 * 1000).toISOString(),
   }));
 }
 
@@ -45,7 +73,7 @@ export async function getById(id: string): Promise<any | null> {
     `SELECT h.*, h.ma_hoa_don as ma_coc, h.trang_thai as trang_thai, h.so_tien_coc as so_tien,
             dk.ma_khach_hang as khach_hang_id,
             k.ho_ten as ten_khach, k.sdt as phone_khach, p.ma_phong as ma_phong,
-            gd.ma_chung_tu as anh_chung_tu_encrypted, gd.phuong_thuc as phuong_thuc, gd.noi_dung as ghi_chu
+            gd.ma_chung_tu as anh_chung_tu_encrypted, gd.phuong_thuc_tt as phuong_thuc_tt, gd.noi_dung_tt as ghi_chu
      FROM hoa_don_coc h
      LEFT JOIN phieu_dang_ky dk ON h.ma_phieu_dk = dk.ma_phieu_dk
      LEFT JOIN khach_hang k ON dk.ma_khach_hang = k.ma_khach_hang
@@ -106,7 +134,7 @@ export async function uploadProof(
   // We'll generate a random MaGiaoDich
   const maGd = "GD" + Math.floor(Math.random() * 1000000);
   await query(
-    `INSERT INTO thong_tin_gd (ma_giao_dich, ma_chung_tu, noi_dung, thoi_gian_tt, phuong_thuc, ma_hoa_don)
+    `INSERT INTO thong_tin_gd (ma_giao_dich, ma_chung_tu, noi_dung_tt, thoi_gian_tt, phuong_thuc_tt, ma_hoa_don)
      VALUES ($1, $2, $3, NOW(), $4, $5)`,
     [maGd, encryptedData, mimeType, phuongThuc, id]
   );
@@ -125,7 +153,7 @@ export async function reject(id: string, ghiChu: string): Promise<void> {
     [id],
   );
   await query(
-    `UPDATE thong_tin_gd SET noi_dung=$1 WHERE ma_hoa_don=$2`,
+    `UPDATE thong_tin_gd SET noi_dung_tt=$1 WHERE ma_hoa_don=$2`,
     [ghiChu, id]
   );
 }
@@ -179,12 +207,13 @@ export async function getStats(): Promise<Record<string, number>> {
 // Fetch PhieuDangKy for UI selection
 export async function getAllPhieuDangKy(): Promise<any[]> {
     const result = await query(`
-      SELECT pdk.MaPhieuDK as ma_phieu, pdk.TrangThai as trang_thai, 
-             k.HoTen as ten_khach, k.Sdt as phone_khach
-      FROM PhieuDangKy pdk
-      LEFT JOIN KhachHang k ON pdk.MaKhachHang = k.MaKhachHang
-      WHERE pdk.TrangThai = 'Chờ đặt cọc' OR pdk.TrangThai = 'Mới' OR pdk.TrangThai IS NULL
-      ORDER BY pdk.NgayLap DESC
+      SELECT pdk.ma_phieu_dk as ma_phieu, pdk.trang_thai as trang_thai, 
+             k.ho_ten as ten_khach, k.sdt as phone_khach
+      FROM phieu_dang_ky pdk
+      LEFT JOIN khach_hang k ON pdk.ma_khach_hang = k.ma_khach_hang
+      WHERE pdk.trang_thai = 'Đã chọn phòng' OR pdk.trang_thai = 'Mới' OR pdk.trang_thai IS NULL
+      ORDER BY pdk.ngay_lap DESC
     `);
     return result.rows;
+
 }

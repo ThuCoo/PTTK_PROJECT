@@ -26,11 +26,11 @@ const mapPhieuDangKyToFrontend = (row: any) => ({
 export async function getAll(search?: string, trang_thai?: string) {
   let sql = `
     SELECT 
-      pdk.maphieudk, pdk.songuoidukien, pdk.ngaydukienvao, pdk.trangthai, 
-      pdk.hinhthucthue, pdk.ngaylap, pdk.khuvucmongmuon,pdk.loaiphong,
-      kh.makhachhang, kh.hoten, kh.sdt, kh.email, kh.cccd, kh.gioitinh
-    FROM phieudangky pdk
-    JOIN khachhang kh ON pdk.makhachhang = kh.makhachhang
+      pdk.ma_phieu_dk as maphieudk, pdk.so_nguoi_du_kien as songuoidukien, pdk.ngay_du_kien_vao as ngaydukienvao, pdk.trang_thai as trangthai, 
+      pdk.hinh_thuc_thue as hinhthucthue, pdk.ngay_lap as ngaylap, pdk.khu_vuc_mong_muon as khuvucmongmuon, pdk.loai_phong as loaiphong,
+      kh.ma_khach_hang as makhachhang, kh.ho_ten as hoten, kh.sdt, kh.email, kh.cccd, kh.gioi_tinh as gioitinh
+    FROM phieu_dang_ky pdk
+    JOIN khach_hang kh ON pdk.ma_khach_hang = kh.ma_khach_hang
     WHERE 1=1
   `;
   const params: any[] = [];
@@ -38,18 +38,18 @@ export async function getAll(search?: string, trang_thai?: string) {
  
 
   if (search) {
-    sql += ` AND (kh.hoten ILIKE $${idx} OR kh.sdt ILIKE $${idx} OR kh.email ILIKE $${idx})`;
+    sql += ` AND (kh.ho_ten ILIKE $${idx} OR kh.sdt ILIKE $${idx} OR kh.email ILIKE $${idx})`;
     params.push(`%${search}%`);
     idx++;
   }
 
   if (trang_thai) {
-    sql += ` AND pdk.trangthai = $${idx}`;
+    sql += ` AND pdk.trang_thai = $${idx}`;
     params.push(trang_thai);
     idx++;
   }
 
-  sql += ' ORDER BY pdk.ngaylap DESC';
+  sql += ' ORDER BY pdk.ngay_lap DESC';
   const result = await query(sql, params);
   // console.log('rall ' ,result)
   return result.rows.map(mapPhieuDangKyToFrontend);
@@ -58,23 +58,23 @@ export async function getAll(search?: string, trang_thai?: string) {
 export async function getById(id: string) {
   const result = await query(
     `SELECT 
-      pdk.maphieudk, pdk.songuoidukien, pdk.ngaydukienvao, pdk.trangthai, 
-      pdk.hinhthucthue, pdk.ngaylap, pdk.khuvucmongmuon,pdk.loaiphong,
-      kh.makhachhang, kh.hoten, kh.sdt, kh.email, kh.cccd, kh.gioitinh
-    FROM phieudangky pdk
-    JOIN khachhang kh ON pdk.makhachhang = kh.makhachhang
-    WHERE pdk.maphieudk = $1`,
+      pdk.ma_phieu_dk as maphieudk, pdk.so_nguoi_du_kien as songuoidukien, pdk.ngay_du_kien_vao as ngaydukienvao, pdk.trang_thai as trangthai, 
+      pdk.hinh_thuc_thue as hinhthucthue, pdk.ngay_lap as ngaylap, pdk.khu_vuc_mong_muon as khuvucmongmuon, pdk.loai_phong as loaiphong,
+      kh.ma_khach_hang as makhachhang, kh.ho_ten as hoten, kh.sdt, kh.email, kh.cccd, kh.gioi_tinh as gioitinh
+    FROM phieu_dang_ky pdk
+    JOIN khach_hang kh ON pdk.ma_khach_hang = kh.ma_khach_hang
+    WHERE pdk.ma_phieu_dk = $1`,
     [id]
   );
 
   const row = result.rows[0];
   if (!row) throw new Error('Không tìm thấy phiếu đăng ký');
   const bedsResult = await query(
-    `SELECT p.maphong as room, pg.magiuong
-     FROM PhieuDangKy_Giuong pg
-     JOIN Giuong g ON pg.magiuong = g.magiuong
-     JOIN Phong p ON g.maphong = p.maphong
-     WHERE pg.maphieudk = $1`, 
+    `SELECT p.ma_phong as room, pg.ma_giuong as magiuong
+     FROM phieu_dang_ky_giuong pg
+     JOIN giuong g ON pg.ma_giuong = g.ma_giuong
+     JOIN phong p ON g.ma_phong = p.ma_phong
+     WHERE pg.ma_phieu_dk = $1`, 
     [id]
   );
   console.log('bed da chon ', bedsResult)
@@ -106,7 +106,7 @@ export async function create(data: {
 
   // Step 1: Create or find existing customer by phone
   let khQuery = await query(
-    'SELECT makhachhang FROM khachhang WHERE sdt = $1',
+    'SELECT ma_khach_hang as makhachhang FROM khach_hang WHERE sdt = $1',
     [data.phone]
   );
 
@@ -115,16 +115,16 @@ export async function create(data: {
     maKhachHang = khQuery.rows[0].makhachhang;
     // Update customer info
     await query(
-      `UPDATE khachhang 
-       SET hoten = $1, email = $2, cccd = $3, gioitinh = $4
-       WHERE makhachhang = $5`,
+      `UPDATE khach_hang 
+       SET ho_ten = $1, email = $2, cccd = $3, gioi_tinh = $4
+       WHERE ma_khach_hang = $5`,
       [data.ho_ten, data.email || null, data.cccd || null, data.gioi_tinh || 'Nam', maKhachHang]
     );
   } else {
     // Create new customer
-    maKhachHang = await generateNextCode('KH', 'khachhang', 'makhachhang');
+    maKhachHang = await generateNextCode('KH', 'khach_hang', 'ma_khach_hang');
     await query(
-      `INSERT INTO khachhang (makhachhang, hoten, sdt, email, cccd, gioitinh)
+      `INSERT INTO khach_hang (ma_khach_hang, ho_ten, sdt, email, cccd, gioi_tinh)
        VALUES ($1, $2, $3, $4, $5, $6)`,
       [maKhachHang, data.ho_ten, data.phone, data.email || null, data.cccd || null, data.gioi_tinh || 'Nam']
     );
@@ -132,13 +132,13 @@ export async function create(data: {
 
   // Step 2: Create PhieuDangKy
 
-  const maPhieuDK = await generateNextCode('PDK', 'phieudangky', 'maphieudk');
+  const maPhieuDK = await generateNextCode('PDK', 'phieu_dang_ky', 'ma_phieu_dk');
    console.log('ma phieu dk ',maPhieuDK)
   const result = await query(
-    `INSERT INTO phieudangky 
-     (maphieudk, songuoidukien, ngaydukienvao, trangthai, hinhthucthue, ngaylap, khuvucmongmuon, makhachhang,loaiphong)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8,$9)
-     RETURNING maphieudk`,
+    `INSERT INTO phieu_dang_ky 
+     (ma_phieu_dk, so_nguoi_du_kien, ngay_du_kien_vao, trang_thai, hinh_thuc_thue, ngay_lap, khu_vuc_mong_muon, ma_khach_hang, loai_phong)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+     RETURNING ma_phieu_dk as maphieudk`,
     [
       maPhieuDK,
       data.so_nguoi || 1,
@@ -160,7 +160,7 @@ export async function create(data: {
 export async function update(id: string, data: Partial<any>) {
   // 1. Lấy thông tin hiện tại để đảm bảo tồn tại và lấy makhachhang
   const existingResult = await query(
-    `SELECT makhachhang FROM phieudangky WHERE maphieudk = $1`,
+    `SELECT ma_khach_hang as makhachhang FROM phieu_dang_ky WHERE ma_phieu_dk = $1`,
     [id]
   );
   if (existingResult.rows.length === 0) throw new Error('Không tìm thấy phiếu đăng ký');
@@ -173,7 +173,7 @@ export async function update(id: string, data: Partial<any>) {
   let khIdx = 1;
 
   if (data.ho_ten !== undefined) {
-    khUpdates.push(`hoten = $${khIdx++}`);
+    khUpdates.push(`ho_ten = $${khIdx++}`);
     khParams.push(data.ho_ten);
   }
   if (data.email !== undefined) {
@@ -185,14 +185,14 @@ export async function update(id: string, data: Partial<any>) {
     khParams.push(data.cccd);
   }
   if (data.gioi_tinh !== undefined) {
-    khUpdates.push(`gioitinh = $${khIdx++}`);
+    khUpdates.push(`gioi_tinh = $${khIdx++}`);
     khParams.push(data.gioi_tinh);
   }
 
   if (khUpdates.length > 0) {
     khParams.push(maKhachHang);
     await query(
-      `UPDATE khachhang SET ${khUpdates.join(', ')} WHERE makhachhang = $${khIdx}`,
+      `UPDATE khach_hang SET ${khUpdates.join(', ')} WHERE ma_khach_hang = $${khIdx}`,
       khParams
     );
   }
@@ -203,30 +203,30 @@ export async function update(id: string, data: Partial<any>) {
   let pdkIdx = 1;
 
   if (data.so_nguoi !== undefined) {
-    pdkUpdates.push(`songuoidukien = $${pdkIdx++}`);
+    pdkUpdates.push(`so_nguoi_du_kien = $${pdkIdx++}`);
     pdkParams.push(data.so_nguoi);
   }
   if (data.ngay_vao !== undefined) {
-    pdkUpdates.push(`ngaydukenVao = $${pdkIdx++}`);
+    pdkUpdates.push(`ngay_du_kien_vao = $${pdkIdx++}`);
     pdkParams.push(data.ngay_vao);
   }
   if (data.loai_thue !== undefined) {
-    pdkUpdates.push(`hinhthucthue = $${pdkIdx++}`);
+    pdkUpdates.push(`hinh_thuc_thue = $${pdkIdx++}`);
     pdkParams.push(data.loai_thue);
   }
   if (data.khu_vuc !== undefined) {
-    pdkUpdates.push(`khuvucmongmuon = $${pdkIdx++}`);
+    pdkUpdates.push(`khu_vuc_mong_muon = $${pdkIdx++}`);
     pdkParams.push(data.khu_vuc);
   }
   if (data.trang_thai !== undefined) {
-    pdkUpdates.push(`trangthai = $${pdkIdx++}`);
+    pdkUpdates.push(`trang_thai = $${pdkIdx++}`);
     pdkParams.push(data.trang_thai);
   }
 
   if (pdkUpdates.length > 0) {
     pdkParams.push(id);
     await query(
-      `UPDATE phieudangky SET ${pdkUpdates.join(', ')} WHERE maphieudk = $${pdkIdx}`,
+      `UPDATE phieu_dang_ky SET ${pdkUpdates.join(', ')} WHERE ma_phieu_dk = $${pdkIdx}`,
       pdkParams
     );
   }
@@ -236,7 +236,7 @@ export async function update(id: string, data: Partial<any>) {
 
 export async function updateStatus(id: string, trang_thai: string) {
   await query(
-    'UPDATE phieudangky SET trangthai = $1 WHERE maphieudk = $2',
+    'UPDATE phieu_dang_ky SET trang_thai = $1 WHERE ma_phieu_dk = $2',
     [trang_thai, id]
   );
   console.log('toi day roi ne ne ',trang_thai, '- ', id)

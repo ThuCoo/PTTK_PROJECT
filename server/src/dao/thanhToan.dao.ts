@@ -3,42 +3,42 @@ import { ThanhToan } from '../types';
 
 export async function getAll(search?: string, trangThai?: string): Promise<ThanhToan[]> {
   let sql = `
-    SELECT pt.*, pkt.MaPhieuKT, pdk_tra.MaHopDong, hd.MaKhachHang, k.HoTen as ten_khach, gg.MaPhong
-    FROM PhieuThanhToan pt
-    LEFT JOIN PhieuKiemTra pkt ON pt.MaPhieuKT = pkt.MaPhieuKT
-    LEFT JOIN PhieuDangKyTra pdk_tra ON pkt.MaPhieuTra = pdk_tra.MaPhieuTra
-    LEFT JOIN HopDong hd ON pdk_tra.MaHopDong = hd.MaHopDong
-    LEFT JOIN KhachHang k ON hd.MaKhachHang = k.MaKhachHang
-    LEFT JOIN HopDong_Giuong hdg ON hd.MaHopDong = hdg.MaHopDong
-    LEFT JOIN Giuong gg ON hdg.MaGiuong = gg.MaGiuong
+    SELECT pt.ma_phieu_tt as MaPhieuTT, pt.ngay_lap as NgayLap, pt.hinh_thuc as HinhThuc, pt.trang_thai as TrangThai, pt.ma_phieu_kt as MaPhieuKT, pt.ma_nv_ke_toan as MaNVKeToan, pkt.ma_phieu_kt as MaPhieuKT, pdk_tra.ma_hop_dong as MaHopDong, hd.ma_khach_hang as MaKhachHang, k.ho_ten as ten_khach, gg.ma_phong as MaPhong
+    FROM phieu_thanh_toan pt
+    LEFT JOIN phieu_kiem_tra pkt ON pt.ma_phieu_kt = pkt.ma_phieu_kt
+    LEFT JOIN phieu_dang_ky_tra pdk_tra ON pkt.ma_phieu_tra = pdk_tra.ma_phieu_tra
+    LEFT JOIN hop_dong hd ON pdk_tra.ma_hop_dong = hd.ma_hop_dong
+    LEFT JOIN khach_hang k ON hd.ma_khach_hang = k.ma_khach_hang
+    LEFT JOIN hop_dong_giuong hdg ON hd.ma_hop_dong = hdg.ma_hop_dong
+    LEFT JOIN giuong gg ON hdg.ma_giuong = gg.ma_giuong
     WHERE 1=1
   `;
   const params: any[] = [];
   let idx = 1;
   if (search) {
-    sql += ` AND (pt.MaPhieuTT ILIKE $${idx} OR k.HoTen ILIKE $${idx})`;
+    sql += ` AND (pt.ma_phieu_tt ILIKE $${idx} OR k.ho_ten ILIKE $${idx})`;
     params.push(`%${search}%`); idx++;
   }
   if (trangThai) {
-    sql += ` AND pt.TrangThai = $${idx++}`;
+    sql += ` AND pt.trang_thai = $${idx++}`;
     params.push(trangThai);
   }
-  sql += ' ORDER BY pt.NgayLap DESC';
+  sql += ' ORDER BY pt.ngay_lap DESC';
   const result = await query(sql, params);
   return result.rows;
 }
 
 export async function getById(id: string): Promise<ThanhToan | null> {
   const result = await query(
-    `SELECT pt.*, pkt.MaPhieuKT, pdk_tra.MaHopDong, hd.MaKhachHang, k.HoTen as ten_khach, gg.MaPhong
-     FROM PhieuThanhToan pt
-     LEFT JOIN PhieuKiemTra pkt ON pt.MaPhieuKT = pkt.MaPhieuKT
-     LEFT JOIN PhieuDangKyTra pdk_tra ON pkt.MaPhieuTra = pdk_tra.MaPhieuTra
-     LEFT JOIN HopDong hd ON pdk_tra.MaHopDong = hd.MaHopDong
-     LEFT JOIN KhachHang k ON hd.MaKhachHang = k.MaKhachHang
-     LEFT JOIN HopDong_Giuong hdg ON hd.MaHopDong = hdg.MaHopDong
-     LEFT JOIN Giuong gg ON hdg.MaGiuong = gg.MaGiuong
-     WHERE pt.MaPhieuTT = $1`,
+    `SELECT pt.ma_phieu_tt as MaPhieuTT, pt.ngay_lap as NgayLap, pt.hinh_thuc as HinhThuc, pt.trang_thai as TrangThai, pt.ma_phieu_kt as MaPhieuKT, pt.ma_nv_ke_toan as MaNVKeToan, pkt.ma_phieu_kt as MaPhieuKT, pdk_tra.ma_hop_dong as MaHopDong, hd.ma_khach_hang as MaKhachHang, k.ho_ten as ten_khach, gg.ma_phong as MaPhong
+     FROM phieu_thanh_toan pt
+     LEFT JOIN phieu_kiem_tra pkt ON pt.ma_phieu_kt = pkt.ma_phieu_kt
+     LEFT JOIN phieu_dang_ky_tra pdk_tra ON pkt.ma_phieu_tra = pdk_tra.ma_phieu_tra
+     LEFT JOIN hop_dong hd ON pdk_tra.ma_hop_dong = hd.ma_hop_dong
+     LEFT JOIN khach_hang k ON hd.ma_khach_hang = k.ma_khach_hang
+     LEFT JOIN hop_dong_giuong hdg ON hd.ma_hop_dong = hdg.ma_hop_dong
+     LEFT JOIN giuong gg ON hdg.ma_giuong = gg.ma_giuong
+     WHERE pt.ma_phieu_tt = $1`,
     [id]
   );
   return result.rows[0] || null;
@@ -51,8 +51,8 @@ export async function create(data: {
   HinhThuc: string;
 }): Promise<ThanhToan> {
   const result = await query(
-    `INSERT INTO PhieuThanhToan (MaPhieuTT, NgayLap, HinhThuc, TrangThai, MaPhieuKT, MaNVKeToan)
-     VALUES ($1, NOW(), $2, 'Chờ thanh toán', $3, $4) RETURNING *`,
+    `INSERT INTO phieu_thanh_toan (ma_phieu_tt, ngay_lap, hinh_thuc, trang_thai, ma_phieu_kt, ma_nv_ke_toan)
+     VALUES ($1, NOW(), $2, 'Chờ thanh toán', $3, $4) RETURNING ma_phieu_tt as MaPhieuTT, ngay_lap as NgayLap, hinh_thuc as HinhThuc, trang_thai as TrangThai, ma_phieu_kt as MaPhieuKT, ma_nv_ke_toan as MaNVKeToan`,
     [data.MaPhieuTT, data.HinhThuc, data.MaPhieuKT, data.MaNVKeToan]
   );
   return result.rows[0];
@@ -60,16 +60,16 @@ export async function create(data: {
 
 export async function markPaid(id: string, phuongThuc: string): Promise<void> {
   await query(
-    `UPDATE PhieuThanhToan SET TrangThai='Đã thanh toán', HinhThuc=$1 WHERE MaPhieuTT=$2`,
+    `UPDATE phieu_thanh_toan SET trang_thai='Đã thanh toán', hinh_thuc=$1 WHERE ma_phieu_tt=$2`,
     [phuongThuc, id]
   );
 }
 
 export async function markOverdue(): Promise<void> {
   await query(
-    `UPDATE PhieuThanhToan
-     SET TrangThai='Quá hạn'
-     WHERE TrangThai='Chờ thanh toán'`
+    `UPDATE phieu_thanh_toan
+     SET trang_thai='Quá hạn'
+     WHERE trang_thai='Chờ thanh toán'`
   );
 }
 
@@ -77,10 +77,10 @@ export async function getStats(): Promise<Record<string, number>> {
   const result = await query(
     `SELECT
        COALESCE(SUM(0), 0) as tong_phai_thu,
-       COALESCE(COUNT(*) FILTER (WHERE TrangThai='Đã thanh toán'), 0) as da_thu,
-       COALESCE(COUNT(*) FILTER (WHERE TrangThai='Chờ thanh toán'), 0) as chua_thu,
-       COALESCE(COUNT(*) FILTER (WHERE TrangThai='Quá hạn'), 0) as qua_han
-     FROM PhieuThanhToan`
+       COALESCE(COUNT(*) FILTER (WHERE trang_thai='Đã thanh toán'), 0) as da_thu,
+       COALESCE(COUNT(*) FILTER (WHERE trang_thai='Chờ thanh toán'), 0) as chua_thu,
+       COALESCE(COUNT(*) FILTER (WHERE trang_thai='Quá hạn'), 0) as qua_han
+     FROM phieu_thanh_toan`
   );
   const r = result.rows[0];
   return {
@@ -93,15 +93,15 @@ export async function getStats(): Promise<Record<string, number>> {
 
 export async function getRecentActivity(limit = 4): Promise<any[]> {
   const result = await query(
-    `SELECT 'payment' as type, k.HoTen as customer, gg.MaPhong as room, pt.NgayLap as time
-     FROM PhieuThanhToan pt
-     JOIN PhieuKiemTra pkt ON pt.MaPhieuKT = pkt.MaPhieuKT
-     JOIN PhieuDangKyTra pdk_tra ON pkt.MaPhieuTra = pdk_tra.MaPhieuTra
-     JOIN HopDong hd ON pdk_tra.MaHopDong = hd.MaHopDong
-     JOIN KhachHang k ON hd.MaKhachHang = k.MaKhachHang
-     JOIN HopDong_Giuong hdg ON hd.MaHopDong = hdg.MaHopDong
-     JOIN Giuong gg ON hdg.MaGiuong = gg.MaGiuong
-     ORDER BY pt.NgayLap DESC LIMIT $1`,
+    `SELECT 'payment' as type, k.ho_ten as customer, gg.ma_phong as room, pt.ngay_lap as time
+     FROM phieu_thanh_toan pt
+     JOIN phieu_kiem_tra pkt ON pt.ma_phieu_kt = pkt.ma_phieu_kt
+     JOIN phieu_dang_ky_tra pdk_tra ON pkt.ma_phieu_tra = pdk_tra.ma_phieu_tra
+     JOIN hop_dong hd ON pdk_tra.ma_hop_dong = hd.ma_hop_dong
+     JOIN khach_hang k ON hd.ma_khach_hang = k.ma_khach_hang
+     JOIN hop_dong_giuong hdg ON hd.ma_hop_dong = hdg.ma_hop_dong
+     JOIN giuong gg ON hdg.ma_giuong = gg.ma_giuong
+     ORDER BY pt.ngay_lap DESC LIMIT $1`,
     [limit]
   );
   return result.rows;

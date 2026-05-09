@@ -3,28 +3,28 @@ import * as PhongDAO from '../dao/phong.dao';
 import * as KhachHangDAO from '../dao/khachHang.dao';
 import { generateNextCode } from '../utils/generateCode';
 
-export async function getAll(search?: string, trangThai?: string) {
-  return DatCocDAO.getAll(search, trangThai);
-}
+// export async function getAll(search?: string, trangThai?: string) {
+//   return DatCocDAO.getAll(search, trangThai);
+// }
 
-export async function getById(id: string) {
-  const d = await DatCocDAO.getById(id);
-  if (!d) throw new Error('Không tìm thấy phiếu đặt cọc');
-  return d;
-}
+// export async function getById(id: string) {
+//   const d = await DatCocDAO.getById(id);
+//   if (!d) throw new Error('Không tìm thấy phiếu đặt cọc');
+//   return d;
+// }
 
-export async function searchByCodeOrPhone(query: string) {
-  const d = await DatCocDAO.getByMaCoc(query);
-  if (!d) throw new Error('Không tìm thấy dữ liệu đặt cọc phù hợp');
-  return d;
-}
+// export async function searchByCodeOrPhone(query: string) {
+//   const d = await DatCocDAO.getByMaCoc(query);
+//   if (!d) throw new Error('Không tìm thấy dữ liệu đặt cọc phù hợp');
+//   return d;
+// }
 
 export async function create(maKhachHang: string, maPhong: string, soTienCoc: number, maNVKeToan: string) {
   const phong = await PhongDAO.getByMaPhong(maPhong);
   if (!phong) throw new Error('Phòng không tồn tại');
   if (soTienCoc <= 0) throw new Error('Số tiền cọc phải lớn hơn 0');
 
-  const maCoc = await generateNextCode('HDC', 'HoaDonCoc', 'MaHoaDon');
+  const maCoc = await generateNextCode('HDC', 'hoa_doc_coc', 'ma_hoa_don');
   const hoaDon = await DatCocDAO.create({
     MaHoaDon: maCoc,
     NgayLap: new Date(),

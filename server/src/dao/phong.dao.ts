@@ -37,38 +37,38 @@ function calculateSimilarity(a: string, b: string): number {
 }
 
 export async function getAll(khuVuc?: string, trangThai?: string, search?: string): Promise<Phong[]> {
-  let sql = 'SELECT * FROM Phong WHERE 1=1';
+  let sql = `SELECT ma_phong as MaPhong, loai_phong as LoaiPhong, suc_chua_toi_da as SucchuaToiDa, gia_thue_phong as GiaThuePhong, trang_thai as TrangThai, khu_vuc as KhuVuc, gioi_tinh_ap_dung as GioiTinhApDung, ma_chi_nhanh as MaChiNhanh FROM phong WHERE 1=1`;
   const params: any[] = [];
   let idx = 1;
-  if (khuVuc) { sql += ` AND KhuVuc = $${idx++}`; params.push(khuVuc); }
-  if (trangThai) { sql += ` AND TrangThai = $${idx++}`; params.push(trangThai); }
-  if (search) { sql += ` AND MaPhong ILIKE $${idx++}`; params.push(`%${search}%`); }
-  sql += ' ORDER BY MaPhong';
+  if (khuVuc) { sql += ` AND khu_vuc = $${idx++}`; params.push(khuVuc); }
+  if (trangThai) { sql += ` AND trang_thai = $${idx++}`; params.push(trangThai); }
+  if (search) { sql += ` AND ma_phong ILIKE $${idx++}`; params.push(`%${search}%`); }
+  sql += ' ORDER BY ma_phong';
   const result = await query(sql, params);
   return result.rows;
 }
 
 export async function getById(id: string): Promise<Phong | null> {
-  const result = await query('SELECT * FROM Phong WHERE MaPhong = $1', [id]);
+  const result = await query('SELECT ma_phong as MaPhong, loai_phong as LoaiPhong, suc_chua_toi_da as SucchuaToiDa, gia_thue_phong as GiaThuePhong, trang_thai as TrangThai, khu_vuc as KhuVuc, gioi_tinh_ap_dung as GioiTinhApDung, ma_chi_nhanh as MaChiNhanh FROM phong WHERE ma_phong = $1', [id]);
   return result.rows[0] || null;
 }
 
 export async function getByMaPhong(maPhong: string): Promise<Phong | null> {
-  const result = await query('SELECT * FROM Phong WHERE MaPhong = $1', [maPhong]);
+  const result = await query('SELECT ma_phong as MaPhong, loai_phong as LoaiPhong, suc_chua_toi_da as SucchuaToiDa, gia_thue_phong as GiaThuePhong, trang_thai as TrangThai, khu_vuc as KhuVuc, gioi_tinh_ap_dung as GioiTinhApDung, ma_chi_nhanh as MaChiNhanh FROM phong WHERE ma_phong = $1', [maPhong]);
   return result.rows[0] || null;
 }
 
 export async function updateStatus(id: string, trangThai: string): Promise<void> {
-  await query('UPDATE Phong SET TrangThai = $1 WHERE MaPhong = $2', [trangThai, id]);
+  await query('UPDATE phong SET trang_thai = $1 WHERE ma_phong = $2', [trangThai, id]);
 }
 
 export async function getStats(): Promise<{ tong: number; dang_thue: number; trong: number }> {
   const result = await query(
     `SELECT
        COUNT(*) as tong,
-       COUNT(*) FILTER (WHERE TrangThai = 'Đang thuê') as dang_thue,
-       COUNT(*) FILTER (WHERE TrangThai = 'Còn trống') as trong
-     FROM Phong`
+       COUNT(*) FILTER (WHERE trang_thai = 'Đang thuê') as dang_thue,
+       COUNT(*) FILTER (WHERE trang_thai = 'Còn trống') as trong
+     FROM phong`
   );
   return {
     tong:       parseInt(result.rows[0].tong, 10),
@@ -81,13 +81,13 @@ export async function findPhongPhuHop(maPhieuDK: string): Promise<any[]> {
   // Lấy thông tin phiếu đăng ký
   const phieuResult = await query(`
     SELECT 
-      pdk.hinhthucthue, 
-      pdk.songuoidukien, 
-      pdk.khuvucmongmuon, 
-      kh.gioitinh
-    FROM phieudangky pdk
-    JOIN khachhang kh ON pdk.makhachhang = kh.makhachhang
-    WHERE pdk.maphieudk = $1
+      pdk.hinh_thuc_thue as hinhthucthue, 
+      pdk.so_nguoi_du_kien as songuoidukien, 
+      pdk.khu_vuc_mong_muon as khuvucmongmuon, 
+      kh.gioi_tinh as gioitinh
+    FROM phieu_dang_ky pdk
+    JOIN khach_hang kh ON pdk.ma_khach_hang = kh.ma_khach_hang
+    WHERE pdk.ma_phieu_dk = $1
   `, [maPhieuDK]);
   
   if (phieuResult.rows.length === 0) return [];
@@ -97,12 +97,19 @@ export async function findPhongPhuHop(maPhieuDK: string): Promise<any[]> {
   // Query phòng với thông tin giường
   let sql = `
     SELECT 
-      p.*,
-      COUNT(g.magiuong) FILTER (WHERE g.magiuong IS NOT NULL) as tong_giuong,
-      COUNT(g.magiuong) FILTER (WHERE g.magiuong IS NOT NULL AND g.trangthai = 'Trống') as giuong_trong
+      p.ma_phong as maphong,
+      p.loai_phong as loaiphong,
+      p.suc_chua_toi_da as succhuatoida,
+      p.gia_thue_phong as giatheuphong,
+      p.trang_thai as trangthai,
+      p.khu_vuc as khuvuc,
+      p.gioi_tinh_ap_dung as gioitinhapdung,
+      p.ma_chi_nhanh as machinhnanh,
+      COUNT(g.ma_giuong) FILTER (WHERE g.ma_giuong IS NOT NULL) as tong_giuong,
+      COUNT(g.ma_giuong) FILTER (WHERE g.ma_giuong IS NOT NULL AND g.trang_thai = 'Trống') as giuong_trong
     FROM phong p
-    LEFT JOIN giuong g ON p.maphong = g.maphong
-    WHERE p.gioitinhapdung = $1 AND p.trangthai = 'Còn trống'
+    LEFT JOIN giuong g ON p.ma_phong = g.ma_phong
+    WHERE p.gioi_tinh_ap_dung = $1 AND p.trang_thai = 'Còn trống'
   `;
   
   const params: any[] = [gioitinh];
@@ -110,14 +117,14 @@ export async function findPhongPhuHop(maPhieuDK: string): Promise<any[]> {
   
   if (hinhthucthue === 'Ở ghép') {
     // Ở ghép: cần đủ giường trống và phòng phải có giường
-    sql += ` GROUP BY p.maphong`;
-    sql += ` HAVING COUNT(g.magiuong) FILTER (WHERE g.magiuong IS NOT NULL AND g.trangthai = 'Trống') >= $${idx}`;
+    sql += ` GROUP BY p.ma_phong`;
+    sql += ` HAVING COUNT(g.ma_giuong) FILTER (WHERE g.ma_giuong IS NOT NULL AND g.trang_thai = 'Trống') >= $${idx}`;
     params.push(songuoidukien);
   } else {
     // Thuê nguyên phòng: cần sức chứa đủ
-    sql += ` AND p.succhuatoida >= $${idx}`;
+    sql += ` AND p.suc_chua_toi_da >= $${idx}`;
     params.push(songuoidukien);
-    sql += ` GROUP BY p.maphong`;
+    sql += ` GROUP BY p.ma_phong`;
   }
   
   const result = await query(sql, params);
@@ -126,7 +133,7 @@ export async function findPhongPhuHop(maPhieuDK: string): Promise<any[]> {
   const roomsWithBeds = await Promise.all(
     result.rows.map(async (room: any) => {
       const bedsResult = await query(
-        `SELECT magiuong, trangthai FROM giuong WHERE maphong = $1 ORDER BY magiuong`,
+        `SELECT ma_giuong as magiuong, trang_thai as trangthai FROM giuong WHERE ma_phong = $1 ORDER BY ma_giuong`,
         [room.maphong]
       );
       console.log('bed ne ',bedsResult)
@@ -169,14 +176,14 @@ export async function updateAssignedBeds(
     for (const assignment of assignedBeds) {
       if (assignment.magiuong) {
         await query(
-          `UPDATE giuong SET trangthai = 'Đang sử dụng' 
-           WHERE maphong = $1 AND magiuong = $2`,
+          `UPDATE giuong SET trang_thai = 'Đang sử dụng' 
+           WHERE ma_phong = $1 AND ma_giuong = $2`,
           [maPhong, assignment.magiuong]
         );
         await query(
-          `INSERT INTO PhieuDangKy_Giuong (MaPhieuDK, MaGiuong) 
+          `INSERT INTO phieu_dang_ky_giuong (ma_phieu_dk, ma_giuong) 
            VALUES ($1, $2)
-           ON CONFLICT (MaPhieuDK, MaGiuong) DO NOTHING`,
+           ON CONFLICT (ma_phieu_dk, ma_giuong) DO NOTHING`,
           [maPhieuDK, assignment.magiuong]
         );
       }
@@ -184,7 +191,7 @@ export async function updateAssignedBeds(
 
     // Return phòng cập nhật
     const result = await query(
-      `SELECT * FROM phong WHERE maphong = $1`,
+      `SELECT ma_phong as maphong, loai_phong as loaiphong, suc_chua_toi_da as succhuatoida, gia_thue_phong as giatheuphong, trang_thai as trangthai, khu_vuc as khuvuc, gioi_tinh_ap_dung as gioitinhapdung, ma_chi_nhanh as machinhnanh FROM phong WHERE ma_phong = $1`,
       [maPhong]
     );
     console.log('query giuong ',result)
@@ -199,13 +206,13 @@ export async function unassignBed(maPhieuDK: string, maGiuong: string) {
 
     // 1. Xóa liên kết trong bảng trung gian
     await query(
-      `DELETE FROM PhieuDangKy_Giuong WHERE MaPhieuDK = $1 AND MaGiuong = $2`,
+      `DELETE FROM phieu_dang_ky_giuong WHERE ma_phieu_dk = $1 AND ma_giuong = $2`,
       [maPhieuDK, maGiuong]
     );
 
     // 2. Cập nhật giường thành 'Trống'
     await query(
-      `UPDATE giuong SET trangthai = 'Trống' WHERE magiuong = $1`,
+      `UPDATE giuong SET trang_thai = 'Trống' WHERE ma_giuong = $1`,
       [maGiuong]
     );
 
@@ -222,32 +229,32 @@ export async function assignWholeRoom(maPhieuDK: string, maPhong: string) {
     await query('BEGIN', []);
 
     // 1. Lấy danh sách tất cả các giường của phòng này
-    const bedsResult = await query(`SELECT MaGiuong FROM Giuong WHERE MaPhong = $1`, [maPhong]);
+    const bedsResult = await query(`SELECT ma_giuong FROM giuong WHERE ma_phong = $1`, [maPhong]);
     const allBeds = bedsResult.rows;
     if (allBeds.length === 0) throw new Error("Phòng này chưa được setup giường");
 
     // 2. Liên kết phiếu đăng ký với phòng
     await query(
-      `INSERT INTO PhieuDangKy_Phong (MaPhieuDK, MaPhong) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+      `INSERT INTO phieu_dang_ky_phong (ma_phieu_dk, ma_phong) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
       [maPhieuDK, maPhong]
     );
 
     // 3. Liên kết phiếu đăng ký với TẤT CẢ giường của phòng đó
     for (const bed of allBeds) {
       await query(
-        `INSERT INTO PhieuDangKy_Giuong (MaPhieuDK, MaGiuong) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
-        [maPhieuDK, bed.magiuong]
+        `INSERT INTO phieu_dang_ky_giuong (ma_phieu_dk, ma_giuong) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+        [maPhieuDK, bed.ma_giuong]
       );
     }
     
     // 4. Cập nhật trạng thái của tất cả giường thành 'Đang sử dụng'
-    await query(`UPDATE Giuong SET TrangThai = 'Đang sử dụng' WHERE MaPhong = $1`, [maPhong]);
+    await query(`UPDATE giuong SET trang_thai = 'Đang sử dụng' WHERE ma_phong = $1`, [maPhong]);
     
     // 5. Cập nhật trạng thái của phòng thành 'Hết chỗ'
-    await query(`UPDATE Phong SET TrangThai = 'Hết chỗ' WHERE MaPhong = $1`, [maPhong]);
+    await query(`UPDATE phong SET trang_thai = 'Hết chỗ' WHERE ma_phong = $1`, [maPhong]);
 
     // 6. Cập nhật trạng thái phiếu đăng ký thành 'Đã chọn phòng'
-    await query(`UPDATE PhieuDangKy SET TrangThai = 'Đã chọn phòng' WHERE MaPhieuDK = $1`, [maPhieuDK]);
+    await query(`UPDATE phieu_dang_ky SET trang_thai = 'Đã chọn phòng' WHERE ma_phieu_dk = $1`, [maPhieuDK]);
 
     await query('COMMIT', []);
     return true;

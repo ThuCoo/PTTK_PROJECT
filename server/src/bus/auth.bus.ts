@@ -2,13 +2,14 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import * as UserDAO from '../dao/user.dao';
 import { User, JwtPayload } from '../types';
+import { log } from 'console';
 
 const SALT_ROUNDS = 10;
 const JWT_EXPIRES = '24h';
 
 export async function login(username: string, password: string): Promise<{ token: string; user: User }> {
   const userRow = await UserDAO.findByUsername(username);
-
+  console.log('dang nhap roi ne ',username, '-', password, '- ', userRow);
   if (!userRow) {
     throw new Error('Tên đăng nhập hoặc mật khẩu không đúng');
   }

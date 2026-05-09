@@ -94,7 +94,6 @@ export async function uploadProof(
   const encrypted = encryptBuffer(fileBuffer);
   await DatCocDAO.uploadProof(maCoc, encrypted, mimeType, phuongThuc);
 }
-
 export async function confirm(maCoc: string, nguoiXacNhan: string) {
   const deposit = await DatCocDAO.getById(maCoc);
   if (!deposit) throw new Error("Không tìm thấy phiếu đặt cọc");

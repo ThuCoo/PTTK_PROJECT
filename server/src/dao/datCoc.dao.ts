@@ -1,7 +1,6 @@
-import { query } from '../db';
-import { DatCoc } from '../types';
+import { query } from "../db";
+import { DatCoc } from "../types";
 import { generateNextCode } from '../utils/generateCode';
-
 export async function getAll(
   search?: string,
   trangThai?: string,
@@ -21,7 +20,7 @@ export async function getAll(
     idx++;
   }
   if (trangThai) {
-    sql += ` AND h.trang_thai = $${idx++}`;
+    sql += ` AND d.trang_thai = $${idx++}`;
     params.push(trangThai);
   }
   sql += " ORDER BY d.ngay_tao DESC";
@@ -30,111 +29,118 @@ export async function getAll(
   return result.rows.map((r) => ({ ...r, anh_chung_tu_encrypted: undefined }));
 }
 
-export async function getById(id: string): Promise<DatCoc | null> {
+export async function getById(id: number): Promise<DatCoc | null> {
   const result = await query(
-    `SELECT d.*, k.ho_ten as ten_khach, k.phone as phone_khach, p.ma_phong
+    `SELECT d.*, k.ho_ten as ten_khach, k.sdt as phone_khach, p.ma_phong
      FROM dat_coc d
-     LEFT JOIN khach_hang k ON d.khach_hang_id = k.id
-     LEFT JOIN phong p ON d.phong_id = p.id
-     WHERE d.id = $1`,
-    [id]
+     LEFT JOIN khach_hang k ON d.ma_khach_hang = k.ma_khach_hang
+     LEFT JOIN phong p ON d.ma_phong = p.ma_phong
+     WHERE d.ma_coc = $1`,
+    [id],
   );
   return result.rows[0] || null;
 }
 
-
-export async function getByPhone(phone: string): Promise<any | null> {
-  const result = await query(
-    `SELECT 
-        h.ma_hoa_don as ma_hoa_don, 
-        h.so_tien_coc as so_tien_coc, 
-        h.ngay_lap as ngay_lap,
-        h.trang_thai as trang_thai,
-        k.ho_ten as ten_khach, 
-        pdk_p.ma_phong as ma_phong,
-        p.khu_vuc as khu_vuc,
-        pdk.so_nguoi_du_kien as so_nguoi_du_kien,
-        pdk.ma_phieu_dk as ma_phieu_dk
-     FROM hoa_don_coc h
-     JOIN phieu_dang_ky pdk ON h.ma_phieu_dk = pdk.ma_phieu_dk
-     JOIN khach_hang k ON pdk.ma_khach_hang = k.ma_khach_hang
-     LEFT JOIN phieu_dang_ky_phong pdk_p ON pdk.ma_phieu_dk = pdk_p.ma_phieu_dk
-     LEFT JOIN phong p ON pdk_p.ma_phong = p.ma_phong
-     WHERE k.sdt = $1
-     ORDER BY h.ngay_lap DESC LIMIT 1`,
-    [phone]
-  );
-  
-  if (result.rows.length === 0) return null;
-  
-  const mainData = result.rows[0];
-  
-  // Lấy danh sách thành viên từ phiếu đăng ký
-  const membersResult = await query(
-    `SELECT kh.ho_ten as hoten, kh.cccd as cccd, kh.sdt as sdt, kh.ngay_sinh as ngaysinh
-     FROM phieu_dang_ky_khach_hang pk
-     JOIN khach_hang kh ON pk.ma_khach_hang = kh.ma_khach_hang
-     WHERE pk.ma_phieu_dk = $1`,
-    [mainData.ma_phieu_dk]
-  );
-  
-  mainData.members = membersResult.rows || [];
-  
-  return mainData;
-}
 export async function getByMaCoc(maCoc: string): Promise<DatCoc | null> {
   const result = await query(
-    `SELECT d.*, k.ho_ten as ten_khach, k.phone as phone_khach, p.ma_phong, k.so_nguoi as num_people
+    `SELECT d.*, k.ho_ten as ten_khach, k.sdt as phone_khach, p.ma_phong, k.so_nguoi as num_people
      FROM dat_coc d
-     LEFT JOIN khach_hang k ON d.khach_hang_id = k.id
-     LEFT JOIN phong p ON d.phong_id = p.id
-     WHERE d.ma_coc = $1 OR k.phone = $1`,
-    [maCoc]
+     LEFT JOIN khach_hang k ON d.ma_khach_hang = k.ma_khach_hang
+     LEFT JOIN phong p ON d.ma_phong = p.ma_phong
+     WHERE d.ma_coc = $1 OR k.sdt = $1`,
+    [maCoc],
   );
   return result.rows[0] || null;
 }
 
 export async function create(data: {
-  MaHoaDon: string;
-  NgayLap: Date;
-  SoTienCoc: number;
-  MaPhieuDK: string;
-  MaNVKeToan: string;
+  ma_coc: string;
+  khach_hang_id: number;
+  phong_id: number;
+  so_giuong: number;
+  so_tien: number;
+  han_thanh_toan: Date;
 }): Promise<DatCoc> {
   const result = await query(
-    `INSERT INTO dat_coc (ma_coc, khach_hang_id, phong_id, so_giuong, so_tien, han_thanh_toan)
+    `INSERT INTO dat_coc (ma_coc, ma_khach_hang, ma_phong, so_giuong, so_tien, han_thanh_toan)
      VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
-    [data.ma_coc, data.khach_hang_id, data.phong_id, data.so_giuong, data.so_tien, data.han_thanh_toan]
+    [
+      data.ma_coc,
+      data.ma_khach_hang,
+      data.ma_phong,
+      data.so_giuong,
+      data.so_tien,
+      data.han_thanh_toan,
+    ],
   );
   return result.rows[0];
 }
 
-export async function uploadProof(id: number, encryptedData: string, mimeType: string, phuongThuc: string): Promise<void> {
+export async function uploadProof(
+  id: number,
+  encryptedData: string,
+  mimeType: string,
+  phuongThuc: string,
+): Promise<void> {
   await query(
-    `UPDATE dat_coc SET anh_chung_tu_encrypted=$1, mime_type=$2, phuong_thuc=$3, trang_thai='Chờ xác nhận' WHERE id=$4`,
-    [encryptedData, mimeType, phuongThuc, id]
+    `UPDATE dat_coc
+     SET anh_chung_tu_encrypted=$1,
+         mime_type=$2,
+         phuong_thuc=$3,
+         trang_thai='Đang xử lý',
+         ghi_chu=NULL,
+         nguoi_xac_nhan=NULL,
+         ngay_xac_nhan=NULL
+     WHERE ma_coc=$4`,
+    [encryptedData, mimeType, phuongThuc, id],
   );
 }
 
-export async function confirm(id: string): Promise<void> {
+export async function confirm(id: number, nguoiXacNhan: string): Promise<void> {
   await query(
-    `UPDATE dat_coc SET trang_thai='Đã xác nhận', nguoi_xac_nhan=$1, ngay_xac_nhan=NOW() WHERE id=$2`,
-    [nguoiXacNhan, id]
+    `UPDATE dat_coc SET trang_thai='Đã xác nhận', nguoi_xac_nhan=$1, ngay_xac_nhan=NOW() WHERE ma_coc=$2`,
+    [nguoiXacNhan, id],
   );
 }
 
-export async function reject(id: string): Promise<void> {
+export async function reject(id: number, ghiChu: string): Promise<void> {
   await query(
-    `UPDATE dat_coc SET trang_thai='Chờ thanh toán', ghi_chu=$1,
-     anh_chung_tu_encrypted=NULL, mime_type=NULL WHERE id=$2`,
-    [ghiChu, id]
+    `UPDATE dat_coc
+     SET trang_thai='Không hợp lệ',
+         ghi_chu=$1
+     WHERE ma_coc=$2`,
+    [ghiChu, id],
   );
 }
 
-export async function cancel(id: string): Promise<void> {
+export async function refund(id: number, ghiChu: string): Promise<void> {
   await query(
-    `UPDATE dat_coc SET trang_thai='Đã hủy (quá hạn)' WHERE id=$1`,
-    [id]
+    `UPDATE dat_coc
+     SET trang_thai='Hoàn tiền',
+         ghi_chu=$1,
+         nguoi_xac_nhan=NULL,
+         ngay_xac_nhan=NULL
+     WHERE ma_coc=$2`,
+    [ghiChu, id],
+  );
+}
+
+export async function cancel(id: number): Promise<void> {
+  await query(
+    `UPDATE dat_coc SET trang_thai='Quá hạn thanh toán' WHERE ma_coc=$1`,
+    [id],
+  );
+}
+
+export async function markOverdue(): Promise<
+  Array<{ id: number; phong_id: number }>
+> {
+  const result = await query(
+    `UPDATE dat_coc
+     SET trang_thai='Quá hạn thanh toán'
+     WHERE trang_thai='Chờ thanh toán'
+       AND han_thanh_toan < NOW()
+     RETURNING ma_coc as id, ma_phong as phong_id`,
   );
   return result.rows;
 }
@@ -144,9 +150,12 @@ export async function getStats(): Promise<Record<string, number>> {
     `SELECT
        COUNT(*) as tong,
        COUNT(*) FILTER (WHERE trang_thai = 'Chờ thanh toán') as cho_thanh_toan,
-       COUNT(*) FILTER (WHERE trang_thai = 'Chờ xác nhận') as cho_xac_nhan,
-       COUNT(*) FILTER (WHERE trang_thai = 'Đã xác nhận') as da_xac_nhan
-     FROM dat_coc`
+       COUNT(*) FILTER (WHERE trang_thai = 'Đang xử lý') as dang_xu_ly,
+       COUNT(*) FILTER (WHERE trang_thai = 'Không hợp lệ') as khong_hop_le,
+       COUNT(*) FILTER (WHERE trang_thai = 'Đã xác nhận') as da_xac_nhan,
+       COUNT(*) FILTER (WHERE trang_thai IN ('Quá hạn thanh toán', 'Đã hủy (quá hạn)')) as qua_han,
+       COUNT(*) FILTER (WHERE trang_thai = 'Hoàn tiền') as hoan_tien
+     FROM dat_coc`,
   );
   const r = result.rows[0];
   return {
@@ -268,4 +277,43 @@ export async function updateStatus(maHopDong: string, trangThai: 'Đang hiệu l
     [trangThai, maHopDong]
   );
   return { success: true };
+}
+export async function getByPhone(phone: string): Promise<any | null> {
+  const result = await query(
+    `SELECT 
+        h.ma_hoa_don as ma_hoa_don, 
+        h.so_tien_coc as so_tien_coc, 
+        h.ngay_lap as ngay_lap,
+        h.trang_thai as trang_thai,
+        k.ho_ten as ten_khach, 
+        pdk_p.ma_phong as ma_phong,
+        p.khu_vuc as khu_vuc,
+        pdk.so_nguoi_du_kien as so_nguoi_du_kien,
+        pdk.ma_phieu_dk as ma_phieu_dk
+     FROM hoa_don_coc h
+     JOIN phieu_dang_ky pdk ON h.ma_phieu_dk = pdk.ma_phieu_dk
+     JOIN khach_hang k ON pdk.ma_khach_hang = k.ma_khach_hang
+     LEFT JOIN phieu_dang_ky_phong pdk_p ON pdk.ma_phieu_dk = pdk_p.ma_phieu_dk
+     LEFT JOIN phong p ON pdk_p.ma_phong = p.ma_phong
+     WHERE k.sdt = $1
+     ORDER BY h.ngay_lap DESC LIMIT 1`,
+    [phone]
+  );
+  
+  if (result.rows.length === 0) return null;
+  
+  const mainData = result.rows[0];
+  
+  // Lấy danh sách thành viên từ phiếu đăng ký
+  const membersResult = await query(
+    `SELECT kh.ho_ten as hoten, kh.cccd as cccd, kh.sdt as sdt, kh.ngay_sinh as ngaysinh
+     FROM phieu_dang_ky_khach_hang pk
+     JOIN khach_hang kh ON pk.ma_khach_hang = kh.ma_khach_hang
+     WHERE pk.ma_phieu_dk = $1`,
+    [mainData.ma_phieu_dk]
+  );
+  
+  mainData.members = membersResult.rows || [];
+  
+  return mainData;
 }

@@ -6,6 +6,7 @@ export async function findByUsername(username: string): Promise<User & { passwor
     'SELECT id, username, password_hash, ho_ten, role, email FROM users WHERE username = $1',
     [username]
   );
+  console.log('findByUsername result: ', result.rows[0], 'for username: ', username);
   return result.rows[0] || null;
 }
 

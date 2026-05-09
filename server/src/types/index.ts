@@ -34,7 +34,6 @@ export interface KhachHang {
   sdt?: string;
   phone?: string; // Backwards compat alias
   email?: string;
-  assignedRooms?: Array<{ room: string; bed: number | null }>;
   cccd?: string;
   gioi_tinh?: "Nam" | "Nữ";
   so_nguoi?: number;
@@ -60,20 +59,6 @@ export interface LichXemPhong {
   // Joined fields
   ten_khach?: string;
   phone_khach?: string;
-}
-
-// ─── Registration ────────────────────────────────────────────────────────
-export interface PhieuDangKy {
-  maphieudk: string;
-  songuoidukien: number;
-  ngaydukenVao: string;
-  trangthai: string;
-  hinhthucthue: string;
-  ngaylap: string;
-  khuvucmongmuon?: string;
-  makhachhang: string;
-  manvsale?: string;
-  loaiphong?: string;
 }
 
 // ─── Deposit ─────────────────────────────────────────────────────────────────

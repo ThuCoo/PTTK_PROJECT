@@ -68,7 +68,7 @@ router.post(
   requireQl,
   async (req: Request, res: Response) => {
     try {
-      await HopDongBUS.terminate(req.params.id);
+      await HopDongBUS.terminate( parseInt(req.params.id));
       res.json({ success: true, message: "Hợp đồng đã kết thúc" });
     } catch (err: any) {
       res.status(400).json({ success: false, error: err.message });

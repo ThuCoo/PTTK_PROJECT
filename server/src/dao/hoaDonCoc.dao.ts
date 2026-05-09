@@ -25,18 +25,24 @@ export async function getAll(
     idx++;
   }
   if (trangThai) {
-    sql += ` AND h.TrangThai = $${idx++}`;
+    sql += ` AND h.trang_thai = $${idx++}`;
     params.push(trangThai);
   }
-  sql += " ORDER BY h.ThoiGianCoc DESC";
+  sql += " ORDER BY h.thoi_gian_coc DESC";
   const result = await query(sql, params);
-  return result.rows.map(r => ({
-      id: r.id, ma_coc: r.ma_coc, khach_hang_id: r.khach_hang_id, phong_id: r.ma_phong,
-      so_giuong: 1,
-      so_tien: parseFloat(r.so_tien),
-      ngay_tao: r.ngay_tao, trang_thai: r.trang_thai,
-      ten_khach: r.ten_khach, phone_khach: r.phone_khach, ma_phong: r.ma_phong,
-      nguoi_xac_nhan: r.nguoi_xac_nhan
+  return result.rows.map((r) => ({
+    id: r.id,
+    ma_coc: r.ma_coc,
+    khach_hang_id: r.khach_hang_id,
+    phong_id: r.ma_phong,
+    so_giuong: 1,
+    so_tien: parseFloat(r.so_tien),
+    ngay_tao: r.ngay_tao,
+    trang_thai: r.trang_thai,
+    ten_khach: r.ten_khach,
+    phone_khach: r.phone_khach,
+    ma_phong: r.ma_phong,
+    nguoi_xac_nhan: r.nguoi_xac_nhan,
   }));
 }
 
@@ -70,7 +76,7 @@ export async function getById(id: string): Promise<any | null> {
     ghi_chu: r.ghi_chu,
     ten_khach: r.ten_khach,
     phone_khach: r.phone_khach,
-    ma_phong: r.ma_phong
+    ma_phong: r.ma_phong,
   };
 }
 
@@ -82,11 +88,7 @@ export async function create(data: {
   const result = await query(
     `INSERT INTO hoa_don_coc (ma_hoa_don, ngay_lap, so_tien_coc, trang_thai, thoi_gian_coc, ma_phieu_dk)
      VALUES ($1, NOW(), $2, 'Chờ thanh toán', NOW(), $3) RETURNING *`,
-    [
-      data.ma_hoa_don,
-      data.so_tien,
-      data.ma_phieu_dk
-    ],
+    [data.ma_hoa_don, data.so_tien, data.ma_phieu_dk],
   );
   return result.rows[0];
 }
@@ -100,7 +102,7 @@ export async function uploadProof(
   // First, update status to "Đang xử lý"
   await query(
     `UPDATE hoa_don_coc SET trang_thai='Đang xử lý' WHERE ma_hoa_don=$1`,
-    [id]
+    [id],
   );
   // Then insert/update ThongTinGD
   // We'll generate a random MaGiaoDich
@@ -108,7 +110,7 @@ export async function uploadProof(
   await query(
     `INSERT INTO thong_tin_gd (ma_giao_dich, ma_chung_tu, noi_dung, thoi_gian_tt, phuong_thuc, ma_hoa_don)
      VALUES ($1, $2, $3, NOW(), $4, $5)`,
-    [maGd, encryptedData, mimeType, phuongThuc, id]
+    [maGd, encryptedData, mimeType, phuongThuc, id],
   );
 }
 
@@ -124,10 +126,10 @@ export async function reject(id: string, ghiChu: string): Promise<void> {
     `UPDATE hoa_don_coc SET trang_thai='Không hợp lệ' WHERE ma_hoa_don=$1`,
     [id],
   );
-  await query(
-    `UPDATE thong_tin_gd SET noi_dung=$1 WHERE ma_hoa_don=$2`,
-    [ghiChu, id]
-  );
+  await query(`UPDATE thong_tin_gd SET noi_dung=$1 WHERE ma_hoa_don=$2`, [
+    ghiChu,
+    id,
+  ]);
 }
 
 export async function refund(id: string, ghiChu: string): Promise<void> {
@@ -135,10 +137,10 @@ export async function refund(id: string, ghiChu: string): Promise<void> {
     `UPDATE hoa_don_coc SET trang_thai='Hoàn tiền', ma_nv_ke_toan=NULL WHERE ma_hoa_don=$1`,
     [id],
   );
-  await query(
-    `UPDATE thong_tin_gd SET noi_dung=$1 WHERE ma_hoa_don=$2`,
-    [ghiChu, id]
-  );
+  await query(`UPDATE thong_tin_gd SET noi_dung=$1 WHERE ma_hoa_don=$2`, [
+    ghiChu,
+    id,
+  ]);
 }
 
 export async function markOverdue(): Promise<Array<{ id: string }>> {
@@ -147,7 +149,7 @@ export async function markOverdue(): Promise<Array<{ id: string }>> {
      SET trang_thai='Quá hạn thanh toán'
      WHERE trang_thai='Chờ thanh toán'
        AND thoi_gian_coc < NOW() - INTERVAL '24 HOURS'
-     RETURNING ma_hoa_don as id`
+     RETURNING ma_hoa_don as id`,
   );
   return result.rows;
 }
@@ -162,7 +164,7 @@ export async function getStats(): Promise<Record<string, number>> {
        COUNT(*) FILTER (WHERE trang_thai = 'Đã xác nhận') as da_xac_nhan,
        COUNT(*) FILTER (WHERE trang_thai IN ('Quá hạn thanh toán', 'Đã hủy (quá hạn)')) as qua_han,
        COUNT(*) FILTER (WHERE trang_thai = 'Hoàn tiền') as hoan_tien
-     FROM hoa_don_coc`
+     FROM hoa_don_coc`,
   );
   const r = result.rows[0];
   return {
@@ -176,15 +178,15 @@ export async function getStats(): Promise<Record<string, number>> {
   };
 }
 
-// Fetch PhieuDangKy for UI selection
+// Fetch phieu_dang_ky for UI selection
 export async function getAllPhieuDangKy(): Promise<any[]> {
-    const result = await query(`
-      SELECT pdk.MaPhieuDK as ma_phieu, pdk.TrangThai as trang_thai, 
-             k.HoTen as ten_khach, k.Sdt as phone_khach
-      FROM PhieuDangKy pdk
-      LEFT JOIN KhachHang k ON pdk.MaKhachHang = k.MaKhachHang
-      WHERE pdk.TrangThai = 'Chờ đặt cọc' OR pdk.TrangThai = 'Mới' OR pdk.TrangThai IS NULL
-      ORDER BY pdk.NgayLap DESC
+  const result = await query(`
+      SELECT pdk.ma_phieu_dk as ma_phieu, pdk.trang_thai as trang_thai, 
+             k.ho_ten as ten_khach, k.sdt as phone_khach
+      FROM phieu_dang_ky pdk
+      LEFT JOIN khach_hang k ON pdk.ma_khach_hang = k.ma_khach_hang
+      WHERE pdk.trang_thai = 'Chờ đặt cọc' OR pdk.trang_thai = 'Mới' OR pdk.trang_thai IS NULL
+      ORDER BY pdk.ngay_lap DESC
     `);
-    return result.rows;
+  return result.rows;
 }

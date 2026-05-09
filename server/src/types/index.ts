@@ -130,19 +130,30 @@ export interface ThanhVienNhom {
 
 // ─── Payment ─────────────────────────────────────────────────────────────────
 export interface ThanhToan {
-  ma_thanh_toan: string;
+  // Primary key in DB
+  ma_phieu_tt: string;
+  // Backwards-compat aliases
+  ma_thanh_toan?: string;
   ma_phieu?: string;
-  ma_hop_dong: string;
+
+  // Links to inspection / contract
+  ma_phieu_kt?: string;
+  ma_hop_dong?: string;
+
+  // Basic metadata
+  ngay_lap?: string;
+  hinh_thuc?: string;
+  trang_thai?: "Chưa thanh toán" | "Đã thanh toán" | "Quá hạn" | string;
+  ma_nv_ke_toan?: string;
+
+  // Monetary fields are stored elsewhere in this schema; keep optional for compatibility
   thang?: string;
   tien_thue?: number;
   tien_dien?: number;
   tien_nuoc?: number;
   phi_xe?: number;
   tong_tien?: number;
-  han_thanh_toan?: string;
-  ngay_thanh_toan?: string;
-  phuong_thuc?: string;
-  trang_thai?: "Chưa thanh toán" | "Đã thanh toán" | "Quá hạn";
+
   // Joined fields
   ten_khach?: string;
   ma_phong?: string;

@@ -29,7 +29,7 @@ router.get("/:id", async (req: Request, res: Response) => {
   try {
     res.json({
       success: true,
-      data: await ThanhToanBUS.getById(parseInt(req.params.id)),
+      data: await ThanhToanBUS.getById(req.params.id),
     });
   } catch (err: any) {
     res.status(404).json({ success: false, error: err.message });
@@ -45,12 +45,22 @@ router.post("/", async (req: Request, res: Response) => {
   }
 });
 
+router.post("/:id/pay", async (req: Request, res: Response) => {
+  try {
+    const { phuong_thuc } = req.body;
+    await ThanhToanBUS.markPaid(req.params.id, phuong_thuc);
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(400).json({ success: false, error: err.message });
+  }
+});
+
 router.get(
   "/contract/:hopDongId/unpaid",
   async (req: Request, res: Response) => {
     try {
       const unpaid = await ThanhToanBUS.getUnpaidByContract(
-        parseInt(req.params.hopDongId),
+        req.params.hopDongId,
       );
       res.json({ success: true, data: unpaid, hasUnpaid: unpaid.length > 0 });
     } catch (err: any) {

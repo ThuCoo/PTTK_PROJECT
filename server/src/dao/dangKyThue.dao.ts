@@ -3,7 +3,7 @@ import { Phong } from "../types";
 
 /**
  * Get pending rental registration forms for review
- * Returns forms with status "Chưa duyệt" (Not yet reviewed)
+ * Returns forms with status "Chờ duyệt" (Pending review)
  */
 export async function getPendingForReview() {
   const result = await query(
@@ -13,7 +13,6 @@ export async function getPendingForReview() {
       pdk.ma_khach_hang,
       pdk.ngay_lap as ngay_dang_ky,
       pdk.trang_thai,
-      COALESCE(pdk.trang_thai_xem_xet, 'Chưa duyệt') as trang_thai_xem_xet,
       pdk.so_nguoi_du_kien,
       pdk.ngay_du_kien_vao as ngay_vao_du_kien,
       pdk.khu_vuc_mong_muon,
@@ -24,8 +23,7 @@ export async function getPendingForReview() {
       k.gioi_tinh
     FROM phieu_dang_ky pdk
     LEFT JOIN khach_hang k ON pdk.ma_khach_hang = k.ma_khach_hang
-    WHERE COALESCE(pdk.trang_thai_xem_xet, 'Chưa duyệt') = 'Chưa duyệt'
-      AND pdk.trang_thai = 'Chờ duyệt'
+    WHERE pdk.trang_thai IN ('Chờ duyệt', 'Mới', 'Đã chọn phòng', 'Sẵn sàng ký')
     ORDER BY pdk.ngay_lap DESC
     `,
     [],
@@ -44,7 +42,6 @@ export async function getById(maPhieu: string) {
       pdk.ma_khach_hang,
       pdk.ngay_lap as ngay_dang_ky,
       pdk.trang_thai,
-      COALESCE(pdk.trang_thai_xem_xet, 'Chưa duyệt') as trang_thai_xem_xet,
       pdk.so_nguoi_du_kien,
       pdk.ngay_du_kien_vao as ngay_vao_du_kien,
       pdk.khu_vuc_mong_muon,

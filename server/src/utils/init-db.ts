@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { Pool } from "pg";
 import dotenv from "dotenv";
+import * as AuthBUS from "../bus/auth.bus";
 
 dotenv.config();
 
@@ -79,6 +80,32 @@ async function initDB() {
     console.log(
       "Migrations applied successfully. Database is seeded and ready to use!",
     );
+    // Create demo users if they don't exist (safe to run repeatedly)
+    try {
+      await AuthBUS.createUser(
+        "admin",
+        "password123",
+        "Quản lý",
+        "quan_ly",
+        "admin@example.com",
+      );
+      console.log("Demo user 'admin' created");
+    } catch (err: any) {
+      console.log("Admin user setup skipped:", err.message || err);
+    }
+
+    try {
+      await AuthBUS.createUser(
+        "nhanvien",
+        "password123",
+        "Nhân viên",
+        "nhan_vien",
+        "nhanvien@example.com",
+      );
+      console.log("Demo user 'nhanvien' created");
+    } catch (err: any) {
+      console.log("Nhanvien user setup skipped:", err.message || err);
+    }
     await appPool.end();
   } catch (err) {
     console.error("Error initializing database:", err);

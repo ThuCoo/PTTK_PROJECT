@@ -8,9 +8,9 @@ import {
   Clock,
   ChevronRight,
 } from "lucide-react";
+import { dangKyThueApi } from "../../services/api";
 
 interface RegistrationForm {
-  id: number;
   ma_phieu_dang_ky: string;
   ten_khach: string;
   phone_khach: string;
@@ -22,7 +22,6 @@ interface RegistrationForm {
 }
 
 interface Room {
-  id: number;
   ma_phong: string;
   loai_phong: string;
   suc_chua: number;
@@ -68,16 +67,11 @@ export function PreRentalReview() {
     const fetchPendingForms = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch("/api/dang-ky-thue/pending", {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-        });
-
-        const data = await response.json();
+        const data = await dangKyThueApi.getPending();
         if (data.success) {
           setRegistrationForms(data.data);
           if (data.data.length === 0) {
-            setError("Không có phiếu đăng ký nào chờ duyệt.");
+            setError(null);
           }
         } else {
           setError(data.error || "Lỗi khi lấy danh sách phiếu đăng ký");
@@ -99,13 +93,8 @@ export function PreRentalReview() {
       setSuccessMessage(null);
       setIsProcessing(true);
 
-      // Fetch form details
-      const response = await fetch(`/api/dang-ky-thue/${form.id}`, {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-      });
-
-      const data = await response.json();
+      // Fetch form details (use ma_phieu_dang_ky string id)
+      const data = await dangKyThueApi.getById(form.ma_phieu_dang_ky);
       if (data.success) {
         setSelectedForm(form);
         setFormDetails(data.data);
@@ -140,19 +129,14 @@ export function PreRentalReview() {
       setSuccessMessage(null);
       setIsProcessing(true);
 
-      const response = await fetch(
-        `/api/dang-ky-thue/${selectedForm.id}/validate-conditions`,
+      const data = await dangKyThueApi.validateConditions(
+        selectedForm.ma_phieu_dang_ky,
         {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            room_id: selectedRoom.id,
-            khach_hang_id: formDetails.customer.id,
-          }),
+          room_id: selectedRoom.ma_phong,
+          khach_hang_id:
+            formDetails.customer?.ma_khach_hang || formDetails.customer?.id,
         },
       );
-
-      const data = await response.json();
 
       if (data.success) {
         setConditionCheck(data.data);
@@ -188,15 +172,10 @@ export function PreRentalReview() {
       setSuccessMessage(null);
       setIsProcessing(true);
 
-      const response = await fetch(
-        `/api/dang-ky-thue/${selectedForm.id}/check-room/${selectedRoom.id}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-        },
+      const data = await dangKyThueApi.checkRoom(
+        selectedForm.ma_phieu_dang_ky,
+        selectedRoom.ma_phong,
       );
-
-      const data = await response.json();
 
       if (data.success) {
         setRoomStatusCheck(data.data);
@@ -231,19 +210,13 @@ export function PreRentalReview() {
       setSuccessMessage(null);
       setIsProcessing(true);
 
-      const response = await fetch(
-        `/api/dang-ky-thue/${selectedForm.id}/confirm-review`,
+      const data = await dangKyThueApi.confirmReview(
+        selectedForm.ma_phieu_dang_ky,
         {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            room_id: selectedRoom.id,
-            ghi_chu: "Đã duyệt từ quy trình rà soát điều kiện",
-          }),
+          room_id: selectedRoom.ma_phong,
+          ghi_chu: "Đã duyệt từ quy trình rà soát điều kiện",
         },
       );
-
-      const data = await response.json();
 
       if (data.success) {
         setCurrentStep(6); // Move to step 6: End UC
@@ -294,7 +267,7 @@ export function PreRentalReview() {
   }
 
   return (
-    <div className="space-y-6 p-6 bg-white rounded-lg border border-gray-200">
+    <div className="space-y-6 p-6 rounded-lg border border-gray-200">
       <h1 className="text-3xl font-bold text-gray-900">
         Rà soát Điều kiện & Tình trạng Phòng
       </h1>
@@ -336,7 +309,7 @@ export function PreRentalReview() {
       )}
 
       {/* Step Progress */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 ">
         <div className="flex items-center">
           <div
             className={`px-3 py-1 rounded-full text-sm font-semibold ${
@@ -347,7 +320,7 @@ export function PreRentalReview() {
           >
             Bước {currentStep}
           </div>
-          <span className="ml-3 text-gray-600">
+          <span className="ml-3">
             {currentStep === 1 && "Danh sách phiếu đăng ký"}
             {currentStep === 2 && "Chọn phòng"}
             {currentStep === 3 && "Kiểm tra điều kiện"}
@@ -360,7 +333,7 @@ export function PreRentalReview() {
 
       {/* Step 1: Display list of pending forms */}
       {currentStep === 1 && (
-        <div className="space-y-4">
+        <div className="space-y-4 p-6 bg-white rounded-lg border border-gray-200">
           <h2 className="text-xl font-semibold">
             📋 Danh sách Phiếu Đăng Ký Chờ Duyệt
           </h2>
@@ -373,7 +346,7 @@ export function PreRentalReview() {
             <div className="grid gap-4">
               {registrationForms.map((form) => (
                 <div
-                  key={form.id}
+                  key={form.ma_phieu_dang_ky}
                   className="p-4 border border-gray-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 cursor-pointer transition"
                   onClick={() => handleSelectForm(form)}
                 >
@@ -420,9 +393,9 @@ export function PreRentalReview() {
             ) : (
               selectedForm.selected_rooms.map((room) => (
                 <div
-                  key={room.id}
+                  key={room.ma_phong}
                   className={`p-4 border-2 rounded-lg cursor-pointer transition ${
-                    selectedRoom?.id === room.id
+                    selectedRoom?.ma_phong === room.ma_phong
                       ? "border-blue-600 bg-blue-50"
                       : "border-gray-200 hover:border-blue-400"
                   }`}
@@ -453,7 +426,7 @@ export function PreRentalReview() {
                         </span>
                       </div>
                     </div>
-                    {selectedRoom?.id === room.id && (
+                    {selectedRoom?.ma_phong === room.ma_phong && (
                       <CheckCircle className="text-blue-600" />
                     )}
                   </div>

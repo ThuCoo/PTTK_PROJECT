@@ -22,12 +22,14 @@ export async function getAll(
     sql += ` AND hd.trang_thai = $${idx++}`;
     params.push(trangThai);
   }
-  sql += " ORDER BY hd.created_at DESC";
+  sql += " ORDER BY hd.ngay_lap DESC";
   const result = await query(sql, params);
   return result.rows;
 }
 
-export async function getById(maHopDong: string | number): Promise<HopDong | null> {
+export async function getById(
+  maHopDong: string | number,
+): Promise<HopDong | null> {
   const result = await query(
     `SELECT hd.*, k.ho_ten as ten_khach, k.sdt as phone_khach
      FROM hop_dong hd
@@ -48,7 +50,7 @@ export async function create(data: any): Promise<HopDong> {
       data.ma_khach_hang || data.khach_hang_id,
       data.ma_phong || data.phong_id,
       data.so_giuong,
-      data.ky_thanh_toan || 'Hàng tháng',
+      data.ky_thanh_toan || "Hàng tháng",
       data.tien_ban_giao || 0,
     ],
   );
@@ -63,11 +65,17 @@ export async function sign(maHopDong: string | number): Promise<void> {
 }
 
 export async function terminate(maHopDong: string | number): Promise<void> {
-  await query(`UPDATE hop_dong SET trang_thai='Đã kết thúc' WHERE ma_hop_dong=$1`, [String(maHopDong)]);
+  await query(
+    `UPDATE hop_dong SET trang_thai='Đã kết thúc' WHERE ma_hop_dong=$1`,
+    [String(maHopDong)],
+  );
 }
 
 export async function finalize(id: number): Promise<void> {
-  await query(`UPDATE hop_dong SET trang_thai='Đã thanh lý' WHERE ma_hop_dong=$1`, [id]);
+  await query(
+    `UPDATE hop_dong SET trang_thai='Đã thanh lý' WHERE ma_hop_dong=$1`,
+    [id],
+  );
 }
 
 export async function recordCheckoutTime(
@@ -86,7 +94,7 @@ export async function getByStatus(trangThai: string): Promise<HopDong[]> {
      FROM hop_dong hd
      LEFT JOIN khach_hang k ON hd.ma_khach_hang = k.ma_khach_hang
      WHERE hd.trang_thai = $1
-     ORDER BY hd.created_at DESC`,
+     ORDER BY hd.ngay_lap DESC`,
     [trangThai],
   );
   return result.rows;

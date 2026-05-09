@@ -78,6 +78,23 @@ export const lichXemPhongApi = {
       .then((r) => r.data),
 };
 
+// ─── Rental Registration Review ─────────────────────────────────────────────
+export const dangKyThueApi = {
+  getPending: () => api.get("/dang-ky-thue/pending").then((r) => r.data),
+  getById: (id: string) => api.get(`/dang-ky-thue/${id}`).then((r) => r.data),
+  validateConditions: (
+    id: string,
+    data: { room_id: string; khach_hang_id?: string },
+  ) =>
+    api
+      .post(`/dang-ky-thue/${id}/validate-conditions`, data)
+      .then((r) => r.data),
+  checkRoom: (id: string, roomId: string) =>
+    api.post(`/dang-ky-thue/${id}/check-room/${roomId}`).then((r) => r.data),
+  confirmReview: (id: string, data: { room_id: string; ghi_chu?: string }) =>
+    api.post(`/dang-ky-thue/${id}/confirm-review`, data).then((r) => r.data),
+};
+
 // ─── Deposits ────────────────────────────────────────────────────────────────
 export const datCocApi = {
   getAll: (params?: { search?: string; trang_thai?: string }) =>
@@ -110,11 +127,17 @@ export const hopDongApi = {
   getAll: (params?: { search?: string; trang_thai?: string }) =>
     api.get("/hop-dong", { params }).then((r) => r.data.data),
   getById: (id: number) => api.get(`/hop-dong/${id}`).then((r) => r.data.data),
+  getReturnReady: () =>
+    api.get("/hop-dong/return-ready").then((r) => r.data.data),
   getStats: () => api.get("/hop-dong/stats").then((r) => r.data.data),
   create: (data: any) => api.post("/hop-dong", data).then((r) => r.data.data),
   sign: (id: number) => api.post(`/hop-dong/${id}/sign`).then((r) => r.data),
   terminate: (id: number) =>
     api.post(`/hop-dong/${id}/terminate`).then((r) => r.data),
+  roomReturn: (id: number, roomReportNotes: string) =>
+    api
+      .post(`/hop-dong/${id}/room-return`, { roomReportNotes })
+      .then((r) => r.data),
   addMembers: (id: number, members: any[]) =>
     api.post(`/hop-dong/${id}/members`, { members }).then((r) => r.data),
 };
@@ -125,6 +148,8 @@ export const thanhToanApi = {
     api.get("/thanh-toan", { params }).then((r) => r.data.data),
   getById: (id: number) =>
     api.get(`/thanh-toan/${id}`).then((r) => r.data.data),
+  getUnpaidByContract: (hopDongId: number) =>
+    api.get(`/thanh-toan/contract/${hopDongId}/unpaid`).then((r) => r.data),
   getStats: () => api.get("/thanh-toan/stats").then((r) => r.data.data),
   create: (data: any) => api.post("/thanh-toan", data).then((r) => r.data.data),
   pay: (id: number, phuong_thuc: string) =>

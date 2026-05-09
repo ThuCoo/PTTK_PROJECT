@@ -144,8 +144,13 @@ CREATE TABLE phieu_dang_ky (
     khu_vuc_mong_muon VARCHAR(100),
     ma_khach_hang VARCHAR(50),
     ma_nv_sale VARCHAR(50),
+    trang_thai_xem_xet VARCHAR(100) DEFAULT 'Chờ duyệt',
+    phong_id_confirmed VARCHAR(50),
+    ngay_xem_xet TIMESTAMP,
+    ghi_chu_xem_xet TEXT,
     FOREIGN KEY (ma_khach_hang) REFERENCES khach_hang(ma_khach_hang),
-    FOREIGN KEY (ma_nv_sale) REFERENCES nv_sale(ma_nhan_vien)
+    FOREIGN KEY (ma_nv_sale) REFERENCES nv_sale(ma_nhan_vien),
+    FOREIGN KEY (phong_id_confirmed) REFERENCES phong(ma_phong) ON DELETE SET NULL
 );
 
 -- Quan hệ M:N giữa PhieuDangKy và Phong
@@ -156,6 +161,22 @@ CREATE TABLE phieu_dang_ky_phong (
     FOREIGN KEY (ma_phieu_dk) REFERENCES phieu_dang_ky(ma_phieu_dk),
     FOREIGN KEY (ma_phong) REFERENCES phong(ma_phong)
 );
+
+CREATE TABLE khach_hang_dieu_kien (
+    id SERIAL PRIMARY KEY,
+    ma_khach_hang VARCHAR(50) NOT NULL,
+    khach_hang_id VARCHAR(50) NOT NULL,
+    dieu_kien_id VARCHAR(50) NOT NULL,
+    trang_thai VARCHAR(100) DEFAULT 'Đã duyệt',
+    ghi_chu TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE (ma_khach_hang, dieu_kien_id),
+    UNIQUE (khach_hang_id, dieu_kien_id),
+    FOREIGN KEY (ma_khach_hang) REFERENCES khach_hang(ma_khach_hang) ON DELETE CASCADE,
+    FOREIGN KEY (khach_hang_id) REFERENCES khach_hang(ma_khach_hang) ON DELETE CASCADE,
+    FOREIGN KEY (dieu_kien_id) REFERENCES dieu_kien_thue(ma_dieu_kien) ON DELETE CASCADE
+);
+
 CREATE TABLE hoa_don_coc (
     ma_hoa_don VARCHAR(50) PRIMARY KEY,
     ngay_lap DATE,
@@ -315,7 +336,9 @@ INSERT INTO dich_vu_chi_nhanh VALUES
 
 INSERT INTO dieu_kien_thue VALUES 
 ('DK01', 'Không hút thuốc', 'Tuyệt đối cấm hút thuốc trong phòng và hành lang'),
-('DK02', 'Giờ giới nghiêm', 'Ký túc xá đóng cửa lúc 23h00 mỗi ngày');
+('DK02', 'Giờ giới nghiêm', 'Ký túc xá đóng cửa lúc 23h00 mỗi ngày'),
+('DK03', 'CCCD / hộ chiếu hợp lệ', 'Khách hàng có giấy tờ tùy thân hợp lệ'),
+('DK04', 'Đủ sức chứa', 'Số người dự kiến phù hợp với sức chứa của phòng');
 
 INSERT INTO loai_thiet_bi VALUES 
 ('LTB01', 'Giường tầng sắt', 1500000, 'Không chạy nhảy trên giường'),
@@ -332,6 +355,12 @@ INSERT INTO phong_dieu_kien_thue VALUES
 ('P101', 'DK01'), ('P101', 'DK02'),
 ('P102', 'DK01');
 
+INSERT INTO khach_hang_dieu_kien (ma_khach_hang, khach_hang_id, dieu_kien_id, trang_thai, ghi_chu) VALUES
+('KH01', 'KH01', 'DK03', 'Đã duyệt', NULL),
+('KH01', 'KH01', 'DK04', 'Đã duyệt', NULL),
+('KH02', 'KH02', 'DK03', 'Đã duyệt', NULL),
+('KH02', 'KH02', 'DK04', 'Đã duyệt', NULL);
+
 INSERT INTO giuong VALUES 
 ('G101_1', 1500000, 'Trống', 'P101'),
 ('G101_2', 1500000, 'Trống', 'P101'),
@@ -341,7 +370,10 @@ INSERT INTO giuong VALUES
 ('G102_2', 2000000, 'Đã thuê', 'P102');
 
 -- 3. Dữ liệu Quy trình Đăng ký & Đặt Cọc (Khách KH01 muốn thuê phòng P102)
-INSERT INTO phieu_dang_ky VALUES 
+INSERT INTO phieu_dang_ky (
+    ma_phieu_dk, so_nguoi_du_kien, ngay_du_kien_vao, trang_thai,
+    hinh_thuc_thue, ngay_lap, khu_vuc_mong_muon, ma_khach_hang, ma_nv_sale
+) VALUES 
 ('PDK01', 1, '2026-05-15', 'Chờ xác nhận', 'Ở ghép', '2026-05-01', 'Khu B', 'KH01', 'NV01');
 
 INSERT INTO phieu_dang_ky_phong VALUES ('PDK01', 'P102');
@@ -358,6 +390,50 @@ INSERT INTO hop_dong VALUES
 
 INSERT INTO hop_dong_dich_vu VALUES 
 ('HD01', 'DV01'), ('HD01', 'DV02'), ('HD01', 'DV03');
+
+-- 5. Dữ liệu bổ sung cho màn hình rà soát điều kiện & tình trạng phòng
+INSERT INTO khach_hang VALUES 
+('KH_DK01', 'Nguyễn Văn An', '0901000001', '079100000001', 'Nam', 'an.nguyen@example.com'),
+('KH_DK02', 'Trần Thị Bình', '0901000002', '079100000002', 'Nữ', 'binh.tran@example.com'),
+('KH_DK03', 'Lê Minh Châu', '0901000003', '079100000003', 'Nam', 'chau.le@example.com'),
+('KH_DK04', 'Phạm Thị Dung', '0901000004', '079100000004', 'Nữ', 'dung.pham@example.com');
+
+INSERT INTO phong VALUES 
+('PRV01', 'Phòng 4 người', 4, 1800000, 'Trống', 'Khu A', 'Nam', 'CN01'),
+('PRV02', 'Phòng 2 người', 2, 2500000, 'Đang sử dụng', 'Khu B', 'Nữ', 'CN01'),
+('PRV03', 'Phòng 4 người', 4, 2200000, 'Còn giường', 'Khu A', 'Nam', 'CN01'),
+('PRV04', 'Phòng 6 người', 6, 3200000, 'Trống', 'Khu C', 'Nữ', 'CN01'),
+('PRV05', 'Phòng 4 người', 4, 2100000, 'Còn giường', 'Khu A', 'Nam', 'CN01');
+
+INSERT INTO phong_dieu_kien_thue VALUES 
+('PRV01', 'DK03'), ('PRV01', 'DK04'),
+('PRV02', 'DK03'),
+('PRV03', 'DK03'), ('PRV03', 'DK04'),
+('PRV04', 'DK03'),
+('PRV05', 'DK03'), ('PRV05', 'DK04');
+
+INSERT INTO khach_hang_dieu_kien (ma_khach_hang, khach_hang_id, dieu_kien_id, trang_thai, ghi_chu) VALUES
+('KH_DK01', 'KH_DK01', 'DK03', 'Đã duyệt', NULL),
+('KH_DK01', 'KH_DK01', 'DK04', 'Đã duyệt', NULL),
+('KH_DK02', 'KH_DK02', 'DK03', 'Đã duyệt', NULL),
+('KH_DK02', 'KH_DK02', 'DK04', 'Không hợp lệ', 'Giới tính không phù hợp với phòng'),
+('KH_DK03', 'KH_DK03', 'DK03', 'Đã duyệt', NULL),
+('KH_DK03', 'KH_DK03', 'DK04', 'Đã duyệt', NULL),
+('KH_DK04', 'KH_DK04', 'DK03', 'Đã duyệt', NULL),
+('KH_DK04', 'KH_DK04', 'DK04', 'Đã duyệt', NULL);
+
+INSERT INTO phieu_dang_ky VALUES 
+('PDK_DK01', 4, '2026-06-01', 'Chờ duyệt', 'Thuê nguyên phòng', '2026-05-10', 'Khu A', 'KH_DK01', 'NV01', 'Chờ duyệt', NULL, NULL, NULL),
+('PDK_DK02', 2, '2026-06-05', 'Chờ duyệt', 'Ở ghép', '2026-05-11', 'Khu B', 'KH_DK02', 'NV01', 'Chờ duyệt', NULL, NULL, NULL),
+('PDK_DK03', 4, '2026-06-10', 'Đã chọn phòng', 'Thuê nguyên phòng', '2026-05-12', 'Khu A', 'KH_DK03', 'NV01', 'Chờ duyệt', NULL, NULL, NULL),
+('PDK_DK04', 6, '2026-06-15', 'Sẵn sàng ký', 'Thuê nguyên phòng', '2026-05-13', 'Khu C', 'KH_DK04', 'NV01', 'Chờ duyệt', NULL, NULL, NULL);
+
+INSERT INTO phieu_dang_ky_phong VALUES 
+('PDK_DK01', 'PRV01'),
+('PDK_DK02', 'PRV02'),
+('PDK_DK03', 'PRV03'),
+('PDK_DK04', 'PRV04'),
+('PDK_DK04', 'PRV05');
 
 INSERT INTO hop_dong_giuong VALUES 
 ('HD01', 'G102_1');

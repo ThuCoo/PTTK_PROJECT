@@ -7,16 +7,21 @@ async function syncOverdueDeposits() {
   const expired = await HoaDonCocDAO.markOverdue();
   // For each expired, we should free up the room
   for (const item of expired) {
-    // Find MaPhong from HoaDonCoc -> PhieuDangKy -> PhieuDangKy_Phong
-    const result = await query(`
-      SELECT pkp.MaPhong 
-      FROM HoaDonCoc h
-      JOIN PhieuDangKy_Phong pkp ON h.MaPhieuDK = pkp.MaPhieuDK
-      WHERE h.MaHoaDon = $1
-    `, [item.id]);
-    
+    // Find ma_phong from hoa_don_coc -> phieu_dang_ky -> phieu_dang_ky_phong
+    const result = await query(
+      `
+      SELECT pkp.ma_phong 
+      FROM hoa_don_coc h
+      JOIN phieu_dang_ky_phong pkp ON h.ma_phieu_dk = pkp.ma_phieu_dk
+      WHERE h.ma_hoa_don = $1
+    `,
+      [item.id],
+    );
+
     if (result.rows[0]) {
-      await query(`UPDATE Phong SET TrangThai='Trống' WHERE MaPhong=$1`, [result.rows[0].maphong]);
+      await query(`UPDATE phong SET trang_thai='Trống' WHERE ma_phong=$1`, [
+        result.rows[0].ma_phong,
+      ]);
     }
   }
 }
@@ -34,12 +39,15 @@ export async function getById(id: string) {
 }
 
 export async function create(maPhieuDK: string, soTien: number) {
-  // Validate PhieuDangKy exists
-  const pdkRes = await query(`SELECT * FROM PhieuDangKy WHERE MaPhieuDK=$1`, [maPhieuDK]);
+  // Validate phieu_dang_ky exists
+  const pdkRes = await query(
+    `SELECT * FROM phieu_dang_ky WHERE ma_phieu_dk=$1`,
+    [maPhieuDK],
+  );
   if (!pdkRes.rows[0]) throw new Error("Phiếu đăng ký không tồn tại");
-  
-  const maHoaDon = await generateNextCode("HD", "HoaDonCoc", "MaHoaDon");
-  
+
+  const maHoaDon = await generateNextCode("HD", "hoa_don_coc", "ma_hoa_don");
+
   const deposit = await HoaDonCocDAO.create({
     ma_hoa_don: maHoaDon,
     ma_phieu_dk: maPhieuDK,
@@ -47,13 +55,21 @@ export async function create(maPhieuDK: string, soTien: number) {
   });
 
   // Temporarily hold the room status
-  const roomRes = await query(`SELECT MaPhong FROM PhieuDangKy_Phong WHERE MaPhieuDK=$1`, [maPhieuDK]);
+  const roomRes = await query(
+    `SELECT ma_phong FROM phieu_dang_ky_phong WHERE ma_phieu_dk=$1`,
+    [maPhieuDK],
+  );
   if (roomRes.rows[0]) {
-      await query(`UPDATE Phong SET TrangThai='Đã cọc' WHERE MaPhong=$1`, [roomRes.rows[0].maphong]);
+    await query(`UPDATE phong SET trang_thai='Đã cọc' WHERE ma_phong=$1`, [
+      roomRes.rows[0].ma_phong,
+    ]);
   }
-  
-  // Update PhieuDangKy status
-  await query(`UPDATE PhieuDangKy SET TrangThai='Đã tạo cọc' WHERE MaPhieuDK=$1`, [maPhieuDK]);
+
+  // Update phieu_dang_ky status
+  await query(
+    `UPDATE phieu_dang_ky SET trang_thai='Đã tạo cọc' WHERE ma_phieu_dk=$1`,
+    [maPhieuDK],
+  );
 
   return deposit;
 }
@@ -98,12 +114,14 @@ export async function confirm(id: string, nguoiXacNhan: string) {
     throw new Error('Chỉ có thể xác nhận phiếu ở trạng thái "Đang xử lý"');
   }
   await HoaDonCocDAO.confirm(id, nguoiXacNhan);
-  
+
   // Fix Use Case Logic: Update room status properly upon confirmation
   if (deposit.ma_phong) {
-     // If bed tracking was implemented here, we would update DangO.
-     // For now, confirm room status is "Đã cọc" (or maybe "Đã thuê" depending on logic)
-     await query(`UPDATE Phong SET TrangThai='Đã cọc' WHERE MaPhong=$1`, [deposit.ma_phong]);
+    // If bed tracking was implemented here, we would update DangO.
+    // For now, confirm room status is "Đã cọc" (or maybe "Đã thuê" depending on logic)
+    await query(`UPDATE Phong SET TrangThai='Đã cọc' WHERE MaPhong=$1`, [
+      deposit.ma_phong,
+    ]);
   }
 }
 
@@ -134,7 +152,9 @@ export async function refund(id: string, ghiChu: string) {
 
   await HoaDonCocDAO.refund(id, ghiChu);
   if (deposit.ma_phong) {
-    await query(`UPDATE Phong SET TrangThai='Trống' WHERE MaPhong=$1`, [deposit.ma_phong]);
+    await query(`UPDATE Phong SET TrangThai='Trống' WHERE MaPhong=$1`, [
+      deposit.ma_phong,
+    ]);
   }
   // Revert customer status if needed
 }

@@ -7,7 +7,11 @@
     "dev": "ts-node-dev --respawn --transpile-only src/app.ts",
     "build": "tsc",
     "start": "node dist/app.js",
-    "db:init": "ts-node src/utils/init-db.ts"
+    "db:init": "ts-node src/utils/init-db.ts",
+    "seed": "ts-node src/scripts/seed_users.ts",
+    "seed:test": "ts-node src/scripts/seed_test_data.ts",
+    "migrate:create-thanh": "ts-node src/scripts/create_thanh_toan.ts",
+    "migrate:drop-thanh": "ts-node src/scripts/drop_thanh_toan.ts"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",

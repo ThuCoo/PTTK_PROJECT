@@ -6,6 +6,7 @@ import {
   FileText,
   Clock,
 } from "lucide-react";
+import { hopDongApi, thanhToanApi } from "../../services/api";
 
 interface ReturnRequest {
   id: number;
@@ -50,12 +51,12 @@ export function RoomReturnProcess() {
       try {
         setIsLoading(true);
         setError(null);
-        const response = await fetch("/api/hop-dong/return-ready");
-        if (!response.ok) throw new Error("Không thể tải danh sách hoàn trả");
-        const data = await response.json();
-        setReturnRequests(data.data || []);
+        const data = await hopDongApi.getReturnReady();
+        setReturnRequests(data || []);
       } catch (err: any) {
-        setError(err.message);
+        setError(
+          err?.response?.data?.error || "Không thể tải danh sách hoàn trả",
+        );
         console.error("Error loading return-ready contracts:", err);
       } finally {
         setIsLoading(false);
@@ -82,10 +83,9 @@ export function RoomReturnProcess() {
         setSelectedReturnDetails((prev) => ({ ...prev, loading: true }));
 
         // Check unpaid invoices (for A1 handling)
-        const paymentResponse = await fetch(
-          `/api/thanh-toan/contract/${selectedReturn.id}/unpaid`,
+        const paymentData = await thanhToanApi.getUnpaidByContract(
+          selectedReturn.id,
         );
-        const paymentData = await paymentResponse.json();
         const hasUnpaidInvoices = paymentData.hasUnpaid || false;
 
         // For now, assume room report exists if they've prepared to return
@@ -153,18 +153,7 @@ export function RoomReturnProcess() {
     // Main flow - proceed with return (Steps 5-7)
     setIsProcessing(true);
     try {
-      const response = await fetch(
-        `/api/hop-dong/${selectedReturn.id}/room-return`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ roomReportNotes: reportNotes }),
-        },
-      );
-
-      if (!response.ok) throw new Error("Lỗi khi xử lý hoàn trả phòng");
-
-      const result = await response.json();
+      await hopDongApi.roomReturn(selectedReturn.id, reportNotes);
       alert("Hoàn trả phòng thành công!");
 
       // Reset and reload data
@@ -178,13 +167,10 @@ export function RoomReturnProcess() {
       setReportNotes("");
 
       // Reload return-ready list
-      const listResponse = await fetch("/api/hop-dong/return-ready");
-      if (listResponse.ok) {
-        const listData = await listResponse.json();
-        setReturnRequests(listData.data || []);
-      }
+      const listData = await hopDongApi.getReturnReady();
+      setReturnRequests(listData || []);
     } catch (err: any) {
-      alert(`Lỗi: ${err.message}`);
+      alert(`Lỗi: ${err?.response?.data?.error || err.message}`);
       console.error("Error confirming return:", err);
     } finally {
       setIsProcessing(false);

@@ -6,7 +6,7 @@ export async function getAll(search?: string, trangThai?: string): Promise<Khach
   const params: any[] = [];
   let idx = 1;
   if (search) {
-    sql += ` AND (ho_ten ILIKE $${idx} OR phone ILIKE $${idx} OR email ILIKE $${idx})`;
+    sql += ` AND (ho_ten ILIKE $${idx} OR sdt ILIKE $${idx} OR email ILIKE $${idx})`;
     params.push(`%${search}%`);
     idx++;
   }
@@ -20,39 +20,36 @@ export async function getAll(search?: string, trangThai?: string): Promise<Khach
   return result.rows;
 }
 
-export async function getById(id: number): Promise<KhachHang | null> {
-  const result = await query('SELECT * FROM khach_hang WHERE id = $1', [id]);
+export async function getById(maKhachHang: string): Promise<KhachHang | null> {
+  const result = await query('SELECT * FROM khach_hang WHERE ma_khach_hang = $1', [maKhachHang]);
   return result.rows[0] || null;
 }
 
-export async function create(data: Omit<KhachHang, 'id' | 'created_at'>): Promise<KhachHang> {
+export async function create(data: any): Promise<KhachHang> {
   const result = await query(
     `INSERT INTO khach_hang
-     (ma_phieu, ho_ten, phone, email, cccd, gioi_tinh, so_nguoi, khu_vuc, loai_phong,
-      khoang_gia, ngay_vao, thoi_han_thue, ghi_chu, loai_thue, trang_thai)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+     (ma_khach_hang, ho_ten, sdt, email, cccd, gioi_tinh)
+     VALUES ($1,$2,$3,$4,$5,$6)
      RETURNING *`,
-    [data.ma_phieu, data.ho_ten, data.phone, data.email, data.cccd, data.gioi_tinh,
-     data.so_nguoi, data.khu_vuc, data.loai_phong, data.khoang_gia, data.ngay_vao,
-     data.thoi_han_thue, data.ghi_chu, data.loai_thue, data.trang_thai]
+    [data.ma_khach_hang, data.ho_ten, data.sdt, data.email, data.cccd, data.gioi_tinh]
   );
   return result.rows[0];
 }
 
-export async function update(id: number, data: Partial<KhachHang>): Promise<KhachHang | null> {
-  const fields = Object.keys(data).filter(k => k !== 'id' && k !== 'created_at');
-  if (!fields.length) return getById(id);
+export async function update(maKhachHang: string, data: Partial<KhachHang>): Promise<KhachHang | null> {
+  const fields = Object.keys(data).filter(k => k !== 'created_at');
+  if (!fields.length) return getById(maKhachHang);
   const sets = fields.map((f, i) => `${f} = $${i + 2}`).join(', ');
   const values = fields.map(f => (data as any)[f]);
   const result = await query(
-    `UPDATE khach_hang SET ${sets} WHERE id = $1 RETURNING *`,
-    [id, ...values]
+    `UPDATE khach_hang SET ${sets} WHERE ma_khach_hang = $1 RETURNING *`,
+    [maKhachHang, ...values]
   );
   return result.rows[0] || null;
 }
 
-export async function updateStatus(id: number, trangThai: string): Promise<void> {
-  await query('UPDATE khach_hang SET trang_thai = $1 WHERE id = $2', [trangThai, id]);
+export async function updateStatus(maKhachHang: string, trangThai: string): Promise<void> {
+  await query('UPDATE khach_hang SET trang_thai = $1 WHERE ma_khach_hang = $2', [trangThai, maKhachHang]);
 }
 
 export async function countAll(): Promise<number> {

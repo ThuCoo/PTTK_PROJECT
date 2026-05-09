@@ -17,7 +17,7 @@ router.get('/', async (req: Request, res: Response) => {
 
 router.get('/:id', async (req: Request, res: Response) => {
   try {
-    const data = await KhachHangBUS.getById(parseInt(req.params.id));
+    const data = await KhachHangBUS.getById(req.params.id);
     res.json({ success: true, data });
   } catch (err: any) {
     res.status(404).json({ success: false, error: err.message });
@@ -35,7 +35,7 @@ router.post('/', async (req: Request, res: Response) => {
 
 router.put('/:id', async (req: Request, res: Response) => {
   try {
-    const data = await KhachHangBUS.update(parseInt(req.params.id), req.body);
+    const data = await KhachHangBUS.update(req.params.id, req.body);
     res.json({ success: true, data });
   } catch (err: any) {
     res.status(400).json({ success: false, error: err.message });
@@ -44,7 +44,7 @@ router.put('/:id', async (req: Request, res: Response) => {
 
 router.patch('/:id/status', async (req: Request, res: Response) => {
   try {
-    await KhachHangBUS.updateStatus(parseInt(req.params.id), req.body.trang_thai);
+    await KhachHangBUS.updateStatus(req.params.id, req.body.trang_thai);
     res.json({ success: true, message: 'Cập nhật trạng thái thành công' });
   } catch (err: any) {
     res.status(400).json({ success: false, error: err.message });

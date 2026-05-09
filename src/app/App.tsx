@@ -10,6 +10,8 @@ import { RoomSelection } from "./components/RoomSelection";
 import { AvailabilityVerification } from "./components/AvailabilityVerification";
 import { CheckInProcess } from "./components/CheckInProcess";
 import { CheckOutProcess } from "./components/CheckOutProcess";
+import { RoomReturnProcess } from "./components/RoomReturnProcess";
+import { PreRentalReview } from "./components/PreRentalReview";
 import { AppointmentManagement } from "./components/AppointmentManagement";
 import { DepositManagement } from "./components/DepositManagement";
 import { ContractManagement } from "./components/ContractManagement";
@@ -60,6 +62,10 @@ function AppContent() {
         return <CheckInProcess />;
       case "checkout":
         return <CheckOutProcess />;
+      case "roomReturn":
+        return <RoomReturnProcess />;
+      case "preRentalReview":
+        return <PreRentalReview />;
       case "appointments":
         return <AppointmentManagement />;
       case "deposits":

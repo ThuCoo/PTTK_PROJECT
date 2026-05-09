@@ -18,6 +18,10 @@ const STATUS_COLOR: Record<string, string> = {
   "Đã xác nhận": "bg-green-100 text-green-700",
   "Chờ xác nhận": "bg-yellow-100 text-yellow-700",
   "Chờ thanh toán": "bg-blue-100 text-blue-700",
+  "Đang xử lý": "bg-amber-100 text-amber-700",
+  "Không hợp lệ": "bg-rose-100 text-rose-700",
+  "Hoàn tiền": "bg-slate-200 text-slate-700",
+  "Quá hạn thanh toán": "bg-red-100 text-red-700",
   "Đã hủy (quá hạn)": "bg-red-100 text-red-700",
 };
 
@@ -31,6 +35,15 @@ export function DepositManagement() {
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [proofPreview, setProofPreview] = useState<string | null>(null);
   const [proofImage, setProofImage] = useState<string | null>(null);
+  const [reviewNote, setReviewNote] = useState("");
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [selectedPhieu, setSelectedPhieu] = useState("");
+  const [soTien, setSoTien] = useState("");
+
+  const { data: phieuList = [] } = useQuery({
+    queryKey: ["phieu-dang-ky"],
+    queryFn: datCocApi.getPhieuDangKy,
+  });
 
   const {
     data: deposits = [],
@@ -46,6 +59,15 @@ export function DepositManagement() {
     queryKey: ["deposit-stats"],
     queryFn: datCocApi.getStats,
   });
+
+  const isUserActionState =
+    selected &&
+    ["Chờ thanh toán", "Không hợp lệ"].includes(selected.trang_thai);
+  const isReviewState =
+    selected &&
+    ["Đang xử lý", "Chờ xác nhận", "Không hợp lệ"].includes(
+      selected.trang_thai,
+    );
 
   const uploadMutation = useMutation({
     mutationFn: ({
@@ -69,6 +91,7 @@ export function DepositManagement() {
       setPayMethod("");
       setProofFile(null);
       setProofPreview(null);
+      setReviewNote("");
       alert("Đã gửi chứng từ! Quản lý sẽ xác nhận sớm.");
     },
     onError: (err: any) => alert(err.response?.data?.error || "Lỗi tải lên"),
@@ -88,13 +111,46 @@ export function DepositManagement() {
       datCocApi.reject(id, ghi_chu),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["deposits"] });
+      qc.invalidateQueries({ queryKey: ["deposit-stats"] });
+      setReviewNote("");
+      alert("Đã ghi nhận chứng từ không hợp lệ.");
     },
+    onError: (err: any) =>
+      alert(err.response?.data?.error || "Lỗi từ chối chứng từ"),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (data: { ma_phieu_dk: string; so_tien: string }) =>
+      datCocApi.create(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["deposits"] });
+      qc.invalidateQueries({ queryKey: ["deposit-stats"] });
+      qc.invalidateQueries({ queryKey: ["phieu-dang-ky"] });
+      setShowCreateForm(false);
+      setSelectedPhieu("");
+      setSoTien("");
+      alert("Đã tạo hóa đơn cọc thành công!");
+    },
+    onError: (err: any) => alert(err.response?.data?.error || "Lỗi tạo cọc"),
+  });
+
+  const refundMutation = useMutation({
+    mutationFn: ({ id, ghi_chu }: { id: number; ghi_chu: string }) =>
+      datCocApi.refund(id, ghi_chu),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["deposits"] });
+      qc.invalidateQueries({ queryKey: ["deposit-stats"] });
+      setReviewNote("");
+      alert("Đã hoàn tiền và giải phóng chỗ.");
+    },
+    onError: (err: any) => alert(err.response?.data?.error || "Lỗi hoàn tiền"),
   });
 
   const handleSelectDeposit = async (d: any) => {
     setSelected(d);
     setProofImage(null);
-    if (d.trang_thai === "Chờ xác nhận") {
+    setReviewNote(d.ghi_chu || "");
+    if (["Đang xử lý", "Chờ xác nhận", "Không hợp lệ"].includes(d.trang_thai)) {
       try {
         const img = await datCocApi.getProof(d.id);
         setProofImage(img?.dataUrl ?? null);
@@ -133,8 +189,8 @@ export function DepositManagement() {
       color: "bg-yellow-500",
     },
     {
-      label: "Chờ xác nhận",
-      value: stats?.cho_xac_nhan ?? "—",
+      label: "Đang xử lý",
+      value: stats?.dang_xu_ly ?? "—",
       color: "bg-orange-500",
     },
     {
@@ -150,17 +206,25 @@ export function DepositManagement() {
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Quản lý đặt cọc</h1>
           <p className="text-slate-600 mt-1">
-            Theo dõi và xác nhận các giao dịch đặt cọc
+            Theo dõi giao dịch cọc, chứng từ và trạng thái duyệt
           </p>
         </div>
-        <button
-          onClick={() => refetch()}
-          className="p-2 border border-slate-300 rounded-lg hover:bg-slate-50"
-        >
-          <RefreshCw
-            className={`w-5 h-5 text-slate-500 ${isLoading ? "animate-spin" : ""}`}
-          />
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowCreateForm(true)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
+          >
+            + Tạo Hóa Đơn Cọc
+          </button>
+          <button
+            onClick={() => refetch()}
+            className="p-2 border border-slate-300 rounded-lg hover:bg-slate-50"
+          >
+            <RefreshCw
+              className={`w-5 h-5 text-slate-500 ${isLoading ? "animate-spin" : ""}`}
+            />
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -297,14 +361,19 @@ export function DepositManagement() {
                 {selected.trang_thai === "Đã xác nhận" && (
                   <CheckCircle className="w-5 h-5 text-green-600" />
                 )}
-                {selected.trang_thai === "Chờ xác nhận" && (
+                {(selected.trang_thai === "Đang xử lý" ||
+                  selected.trang_thai === "Chờ xác nhận") && (
                   <AlertCircle className="w-5 h-5 text-yellow-600" />
                 )}
                 {selected.trang_thai === "Chờ thanh toán" && (
                   <Clock className="w-5 h-5 text-blue-600" />
                 )}
-                {selected.trang_thai === "Đã hủy (quá hạn)" && (
+                {(selected.trang_thai === "Quá hạn thanh toán" ||
+                  selected.trang_thai === "Đã hủy (quá hạn)") && (
                   <XCircle className="w-5 h-5 text-red-600" />
+                )}
+                {selected.trang_thai === "Không hợp lệ" && (
+                  <AlertCircle className="w-5 h-5 text-rose-600" />
                 )}
               </div>
 
@@ -327,6 +396,23 @@ export function DepositManagement() {
                   {selected.ma_phong} — {selected.so_giuong} giường
                 </p>
               </div>
+
+              {selected.trang_thai === "Chờ thanh toán" && (
+                <div className="rounded-lg border border-blue-100 bg-blue-50 p-4 text-sm text-slate-700 space-y-2">
+                  <p className="font-semibold text-blue-700">
+                    Hướng dẫn thanh toán
+                  </p>
+                  <p>1. Chọn phương thức thanh toán.</p>
+                  <p>2. Thực hiện giao dịch và chụp lại chứng từ.</p>
+                  <p>
+                    3. Tải ảnh lên để hệ thống chuyển sang trạng thái đang xử
+                    lý.
+                  </p>
+                  <p>
+                    Nếu quá 24 giờ chưa gửi chứng từ, phiếu sẽ tự động quá hạn.
+                  </p>
+                </div>
+              )}
 
               <div className="p-4 bg-slate-50 rounded-lg">
                 <p className="text-sm text-slate-600 mb-1">Số tiền cọc</p>
@@ -361,8 +447,15 @@ export function DepositManagement() {
                 </div>
               )}
 
+              {reviewNote && selected.trang_thai === "Không hợp lệ" && (
+                <div className="rounded-lg border border-rose-100 bg-rose-50 p-4 text-sm text-rose-700">
+                  <p className="font-semibold mb-1">Lý do không hợp lệ</p>
+                  <p>{reviewNote}</p>
+                </div>
+              )}
+
               {/* Show encrypted proof image (decrypted by backend) */}
-              {selected.trang_thai === "Chờ xác nhận" && proofImage && (
+              {isReviewState && proofImage && (
                 <div>
                   <p className="text-sm text-slate-600 mb-2">
                     Chứng từ thanh toán
@@ -376,50 +469,84 @@ export function DepositManagement() {
               )}
 
               {/* Action buttons */}
-              {selected.trang_thai === "Chờ thanh toán" && (
+              {isUserActionState && (
                 <div className="pt-2 space-y-2">
                   <button
                     onClick={() => setShowPayForm(true)}
                     className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                   >
-                    Thực hiện thanh toán
+                    {selected.trang_thai === "Không hợp lệ"
+                      ? "Gửi lại chứng từ"
+                      : "Thực hiện thanh toán"}
                   </button>
                 </div>
               )}
 
-              {selected.trang_thai === "Chờ xác nhận" &&
-                user?.role === "quan_ly" && (
-                  <div className="pt-2 space-y-2">
-                    <button
-                      onClick={() => confirmMutation.mutate(selected.id)}
-                      disabled={confirmMutation.isPending}
-                      className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-60"
-                    >
-                      {confirmMutation.isPending
-                        ? "Đang xử lý..."
-                        : "Kiểm tra và xác nhận"}
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (confirm("Từ chối chứng từ này?"))
-                          rejectMutation.mutate({
-                            id: selected.id,
-                            ghi_chu: "Chứng từ không hợp lệ",
-                          });
-                      }}
-                      className="w-full px-4 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-50 transition-colors"
-                    >
-                      Từ chối chứng từ
-                    </button>
-                  </div>
-                )}
+              {isReviewState && user?.role === "quan_ly" && (
+                <div className="pt-2 space-y-2">
+                  <button
+                    onClick={() => confirmMutation.mutate(selected.id)}
+                    disabled={confirmMutation.isPending}
+                    className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-60"
+                  >
+                    {confirmMutation.isPending
+                      ? "Đang xử lý..."
+                      : "Kiểm tra và xác nhận"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (confirm("Từ chối chứng từ này và cho phép gửi lại?"))
+                        rejectMutation.mutate({
+                          id: selected.id,
+                          ghi_chu: reviewNote || "Chứng từ không hợp lệ",
+                        });
+                    }}
+                    className="w-full px-4 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                  >
+                    Từ chối chứng từ
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (confirm("Hoàn tiền giao dịch này và giải phóng chỗ?"))
+                        refundMutation.mutate({
+                          id: selected.id,
+                          ghi_chu: reviewNote || "Lỗi hệ thống",
+                        });
+                    }}
+                    disabled={refundMutation.isPending}
+                    className="w-full px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-60"
+                  >
+                    {refundMutation.isPending
+                      ? "Đang hoàn tiền..."
+                      : "Hoàn tiền do lỗi hệ thống"}
+                  </button>
+                </div>
+              )}
 
-              {selected.trang_thai === "Chờ xác nhận" &&
+              {isReviewState && user?.role !== "quan_ly" && (
+                <p className="text-xs text-slate-500 text-center italic">
+                  Chờ quản lý xác nhận chứng từ
+                </p>
+              )}
+
+              {selected.trang_thai === "Không hợp lệ" &&
                 user?.role !== "quan_ly" && (
                   <p className="text-xs text-slate-500 text-center italic">
-                    Chờ quản lý xác nhận chứng từ
+                    Chứng từ bị từ chối, vui lòng gửi lại ảnh giao dịch mới
                   </p>
                 )}
+
+              {selected.trang_thai === "Quá hạn thanh toán" && (
+                <p className="text-xs text-red-600 text-center italic">
+                  Quá hạn thanh toán. Phiếu đã được đóng và giải phóng chỗ.
+                </p>
+              )}
+
+              {selected.trang_thai === "Hoàn tiền" && (
+                <p className="text-xs text-slate-500 text-center italic">
+                  Giao dịch đã hoàn tiền và kết thúc.
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -547,7 +674,75 @@ export function DepositManagement() {
                 disabled={!payMethod || !proofFile || uploadMutation.isPending}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
               >
-                {uploadMutation.isPending ? "Đang gửi..." : "Gửi chứng từ"}
+                {uploadMutation.isPending
+                  ? "Đang gửi..."
+                  : selected.trang_thai === "Không hợp lệ"
+                    ? "Gửi lại chứng từ"
+                    : "Gửi chứng từ"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Deposit Modal */}
+      {showCreateForm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg">
+            <div className="p-6 border-b border-slate-200 flex items-center justify-between">
+              <h2 className="text-xl font-bold">Tạo Hóa Đơn Đặt Cọc Mới</h2>
+              <button onClick={() => setShowCreateForm(false)}>
+                <X className="w-6 h-6 text-slate-400" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Chọn Phiếu Đăng Ký *
+                </label>
+                <select
+                  value={selectedPhieu}
+                  onChange={(e) => setSelectedPhieu(e.target.value)}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">-- Chọn Phiếu Đăng Ký --</option>
+                  {phieuList.map((p: any) => (
+                    <option key={p.ma_phieu} value={p.ma_phieu}>
+                      {p.ma_phieu} - {p.ten_khach} ({p.phone_khach})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Số Tiền Cọc (VNĐ) *
+                </label>
+                <input
+                  type="number"
+                  value={soTien}
+                  onChange={(e) => setSoTien(e.target.value)}
+                  placeholder="Nhập số tiền..."
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            <div className="p-6 border-t border-slate-200 flex justify-end gap-3">
+              <button
+                onClick={() => setShowCreateForm(false)}
+                className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={() => {
+                  if (!selectedPhieu || !soTien) return alert("Vui lòng nhập đủ thông tin");
+                  createMutation.mutate({ ma_phieu_dk: selectedPhieu, so_tien: soTien });
+                }}
+                disabled={!selectedPhieu || !soTien || createMutation.isPending}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              >
+                {createMutation.isPending ? "Đang xử lý..." : "Tạo Hóa Đơn"}
               </button>
             </div>
           </div>

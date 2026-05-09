@@ -1,6 +1,6 @@
-import * as ThanhToanDAO from '../dao/thanhToan.dao';
-import * as HopDongDAO from '../dao/hopDong.dao';
-import { generateNextCode } from '../utils/generateCode';
+import * as ThanhToanDAO from "../dao/thanhToan.dao";
+import * as HopDongDAO from "../dao/hopDong.dao";
+import { generateNextCode } from "../utils/generateCode";
 
 export async function getAll(search?: string, trangThai?: string) {
   // Auto-mark overdue invoices on each list query
@@ -10,7 +10,7 @@ export async function getAll(search?: string, trangThai?: string) {
 
 export async function getById(id: number) {
   const tt = await ThanhToanDAO.getById(id);
-  if (!tt) throw new Error('Không tìm thấy phiếu thanh toán');
+  if (!tt) throw new Error("Không tìm thấy phiếu thanh toán");
   return tt;
 }
 
@@ -23,12 +23,13 @@ export async function create(data: {
   han_thanh_toan?: string;
 }) {
   const hd = await HopDongDAO.getById(data.hop_dong_id);
-  if (!hd) throw new Error('Không tìm thấy hợp đồng');
-  if (hd.trang_thai !== 'Đang hiệu lực') throw new Error('Hợp đồng không đang hiệu lực');
+  if (!hd) throw new Error("Không tìm thấy hợp đồng");
+  if (hd.trang_thai !== "Đang hiệu lực")
+    throw new Error("Hợp đồng không đang hiệu lực");
 
   const tienThue = hd.tong_tien_thue;
   const tongTien = tienThue + data.tien_dien + data.tien_nuoc + data.phi_xe;
-  const maPhieu = await generateNextCode('PT', 'thanh_toan', 'ma_phieu');
+  const maPhieu = await generateNextCode("PT", "thanh_toan", "ma_phieu");
 
   return ThanhToanDAO.create({
     ma_phieu: maPhieu,
@@ -45,10 +46,15 @@ export async function create(data: {
 
 export async function markPaid(id: number, phuongThuc: string) {
   const tt = await ThanhToanDAO.getById(id);
-  if (!tt) throw new Error('Không tìm thấy phiếu thanh toán');
-  if (tt.trang_thai === 'Đã thanh toán') throw new Error('Phiếu đã thanh toán rồi');
-  if (!phuongThuc) throw new Error('Phương thức thanh toán là bắt buộc');
+  if (!tt) throw new Error("Không tìm thấy phiếu thanh toán");
+  if (tt.trang_thai === "Đã thanh toán")
+    throw new Error("Phiếu đã thanh toán rồi");
+  if (!phuongThuc) throw new Error("Phương thức thanh toán là bắt buộc");
   await ThanhToanDAO.markPaid(id, phuongThuc);
+}
+
+export async function getUnpaidByContract(hopDongId: number) {
+  return ThanhToanDAO.getUnpaidByContract(hopDongId);
 }
 
 export async function getStats() {

@@ -13,8 +13,8 @@ export async function getAll(khuVuc?: string, trangThai?: string, search?: strin
   return result.rows;
 }
 
-export async function getById(id: number): Promise<Phong | null> {
-  const result = await query('SELECT * FROM phong WHERE id = $1', [id]);
+export async function getById(maPhong: string): Promise<Phong | null> {
+  const result = await query('SELECT * FROM phong WHERE ma_phong = $1', [maPhong]);
   return result.rows[0] || null;
 }
 
@@ -23,14 +23,14 @@ export async function getByMaPhong(maPhong: string): Promise<Phong | null> {
   return result.rows[0] || null;
 }
 
-export async function updateStatus(id: number, trangThai: string): Promise<void> {
-  await query('UPDATE phong SET trang_thai = $1 WHERE id = $2', [trangThai, id]);
+export async function updateStatus(maPhong: string, trangThai: string): Promise<void> {
+  await query('UPDATE phong SET trang_thai = $1 WHERE ma_phong = $2', [trangThai, maPhong]);
 }
 
-export async function incrementOccupied(id: number, delta: number): Promise<void> {
+export async function incrementOccupied(maPhong: string, delta: number): Promise<void> {
   await query(
-    `UPDATE phong SET dang_o = GREATEST(0, LEAST(suc_chua, dang_o + $1)) WHERE id = $2`,
-    [delta, id]
+    `UPDATE phong SET dang_o = GREATEST(0, LEAST(suc_chua_toi_da, dang_o + $1)) WHERE ma_phong = $2`,
+    [delta, maPhong]
   );
 }
 

@@ -13,6 +13,7 @@ import {
   Filter,
   Layers,
   Building2,
+  CheckSquare,
 } from "lucide-react";
 
 interface SidebarUser {
@@ -45,6 +46,12 @@ export function Sidebar({
     { id: "deposits", label: "Đặt cọc", icon: DollarSign },
     { id: "checkin", label: "Nhận phòng", icon: LogIn },
     { id: "checkout", label: "Trả phòng", icon: LogOutIcon },
+    { id: "roomReturn", label: "Hoàn trả phòng", icon: Building2 },
+    {
+      id: "preRentalReview",
+      label: "Rà soát điều kiện & tình trạng",
+      icon: CheckSquare,
+    },
     { id: "contracts", label: "Hợp đồng", icon: FileText },
     { id: "payments", label: "Thanh toán", icon: ClipboardList },
     { id: "reports", label: "Báo cáo", icon: BarChart3 },

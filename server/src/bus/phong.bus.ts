@@ -4,8 +4,8 @@ export async function getAll(khuVuc?: string, trangThai?: string, search?: strin
   return PhongDAO.getAll(khuVuc, trangThai, search);
 }
 
-export async function getById(id: number) {
-  const p = await PhongDAO.getById(id);
+export async function getById(maPhong: string) {
+  const p = await PhongDAO.getById(maPhong);
   if (!p) throw new Error('Không tìm thấy phòng');
   return p;
 }

@@ -1,80 +1,154 @@
-import * as DatCocDAO from '../dao/datCoc.dao';
-import * as PhongDAO from '../dao/phong.dao';
-import * as KhachHangDAO from '../dao/khachHang.dao';
-import { generateNextCode } from '../utils/generateCode';
-import { encryptBuffer } from '../utils/encrypt';
+import * as DatCocDAO from "../dao/datCoc.dao";
+import * as PhongDAO from "../dao/phong.dao";
+import * as KhachHangDAO from "../dao/khachHang.dao";
+import { generateNextCode } from "../utils/generateCode";
+import { encryptBuffer } from "../utils/encrypt";
+
+async function syncOverdueDeposits() {
+  const expired = await DatCocDAO.markOverdue();
+  for (const item of expired) {
+    await PhongDAO.updateStatus(item.ma_phong, "Trống");
+  }
+}
 
 export async function getAll(search?: string, trangThai?: string) {
+  await syncOverdueDeposits();
   return DatCocDAO.getAll(search, trangThai);
 }
 
-export async function getById(id: number) {
-  const d = await DatCocDAO.getById(id);
-  if (!d) throw new Error('Không tìm thấy phiếu đặt cọc');
+export async function getById(maCoc: string) {
+  await syncOverdueDeposits();
+  const d = await DatCocDAO.getById(maCoc);
+  if (!d) throw new Error("Không tìm thấy phiếiu đặt cọc");
   return d;
 }
 
 export async function searchByCodeOrPhone(query: string) {
+  await syncOverdueDeposits();
   const d = await DatCocDAO.getByMaCoc(query);
-  if (!d) throw new Error('Không tìm thấy dữ liệu đặt cọc phù hợp');
+  if (!d) throw new Error("Không tìm thấy dữ liệu đặt cọc phù hợp");
   return d;
 }
 
-export async function create(khachHangId: number, phongId: number, soGiuong: number) {
+export async function create(
+  khachHangId: number,
+  phongId: number,
+  soGiuong: number,
+) {
   const phong = await PhongDAO.getById(phongId);
-  if (!phong) throw new Error('Phòng không tồn tại');
-  if (soGiuong <= 0) throw new Error('Số giường phải lớn hơn 0');
+  if (!phong) throw new Error("Phòng không tồn tại");
+  if (soGiuong <= 0) throw new Error("Số giường phải lớn hơn 0");
   if (soGiuong > phong.suc_chua - phong.dang_o) {
-    throw new Error(`Phòng chỉ còn ${phong.suc_chua - phong.dang_o} giường trống`);
+    throw new Error(
+      `Phòng chỉ còn ${phong.suc_chua - phong.dang_o} giường trống`,
+    );
   }
 
   // Business rule: deposit = 2 months × beds × price per bed
   const soTien = 2 * soGiuong * phong.gia_thue;
   const hanThanhToan = new Date(Date.now() + 24 * 60 * 60 * 1000); // +24 hours
 
-  const maCoc = await generateNextCode('DC', 'dat_coc', 'ma_coc');
-  const deposit = await DatCocDAO.create({ ma_coc: maCoc, khach_hang_id: khachHangId, phong_id: phongId, so_giuong: soGiuong, so_tien: soTien, han_thanh_toan: hanThanhToan });
+  const maCoc = await generateNextCode("DC", "dat_coc", "ma_coc");
+  const deposit = await DatCocDAO.create({
+    ma_coc: maCoc,
+    khach_hang_id: khachHangId,
+    phong_id: phongId,
+    so_giuong: soGiuong,
+    so_tien: soTien,
+    han_thanh_toan: hanThanhToan,
+  });
 
   // Update room status to "Đã cọc"
-  await PhongDAO.updateStatus(phongId, 'Đã cọc');
-  await KhachHangDAO.updateStatus(khachHangId, 'Đồng ý thuê');
+  await PhongDAO.updateStatus(phongId, "Đã cọc");
+  await KhachHangDAO.updateStatus(khachHangId, "Đồng ý thuê");
 
   return deposit;
 }
 
-export async function uploadProof(id: number, fileBuffer: Buffer, mimeType: string, phuongThuc: string) {
-  const deposit = await DatCocDAO.getById(id);
-  if (!deposit) throw new Error('Không tìm thấy phiếu đặt cọc');
-  if (deposit.trang_thai === 'Đã xác nhận') throw new Error('Phiếu đặt cọc đã được xác nhận rồi');
+export async function uploadProof(
+  maCoc: string,
+  fileBuffer: Buffer,
+  mimeType: string,
+  phuongThuc: string,
+) {
+  await syncOverdueDeposits();
+  const deposit = await DatCocDAO.getById(maCoc);
+  if (!deposit) throw new Error("Không tìm thấy phiếu đặt cọc");
+  if (
+    [
+      "Đã xác nhận",
+      "Hoàn tiền",
+      "Quá hạn thanh toán",
+      "Đã hủy (quá hạn)",
+    ].includes(deposit.trang_thai)
+  ) {
+    throw new Error("Phiếu đặt cọc đã kết thúc");
+  }
+  if (
+    deposit.trang_thai !== "Chờ thanh toán" &&
+    deposit.trang_thai !== "Không hợp lệ"
+  ) {
+    throw new Error("Phiếu đặt cọc chưa ở trạng thái có thể gửi chứng từ");
+  }
 
   const encrypted = encryptBuffer(fileBuffer);
-  await DatCocDAO.uploadProof(id, encrypted, mimeType, phuongThuc);
+  await DatCocDAO.uploadProof(maCoc, encrypted, mimeType, phuongThuc);
 }
 
-export async function confirm(id: number, nguoiXacNhan: string) {
-  const deposit = await DatCocDAO.getById(id);
-  if (!deposit) throw new Error('Không tìm thấy phiếu đặt cọc');
-  if (deposit.trang_thai !== 'Chờ xác nhận') {
-    throw new Error('Chỉ có thể xác nhận phiếu ở trạng thái "Chờ xác nhận"');
+export async function confirm(maCoc: string, nguoiXacNhan: string) {
+  const deposit = await DatCocDAO.getById(maCoc);
+  if (!deposit) throw new Error("Không tìm thấy phiếu đặt cọc");
+  if (
+    deposit.trang_thai !== "Đang xử lý" &&
+    deposit.trang_thai !== "Chờ xác nhận"
+  ) {
+    throw new Error('Chỉ có thể xác nhận phiếu ở trạng thái "Đang xử lý"');
   }
-  await DatCocDAO.confirm(id, nguoiXacNhan);
+  await DatCocDAO.confirm(maCoc, nguoiXacNhan);
 }
 
-export async function reject(id: number, ghiChu: string) {
-  const deposit = await DatCocDAO.getById(id);
-  if (!deposit) throw new Error('Không tìm thấy phiếu đặt cọc');
-  await DatCocDAO.reject(id, ghiChu);
+export async function reject(maCoc: string, ghiChu: string) {
+  const deposit = await DatCocDAO.getById(maCoc);
+  if (!deposit) throw new Error("Không tìm thấy phiếu đặt cọc");
+  if (
+    !["Đang xử lý", "Chờ xác nhận", "Không hợp lệ"].includes(deposit.trang_thai)
+  ) {
+    throw new Error("Phiếu đặt cọc không ở trạng thái cần kiểm tra");
+  }
+  await DatCocDAO.reject(maCoc, ghiChu);
+}
+
+export async function refund(maCoc: string, ghiChu: string) {
+  const deposit = await DatCocDAO.getById(maCoc);
+  if (!deposit) throw new Error("Không tìm thấy phiếu đặt cọc");
+  if (
+    [
+      "Đã xác nhận",
+      "Hoàn tiền",
+      "Quá hạn thanh toán",
+      "Đã hủy (quá hạn)",
+    ].includes(deposit.trang_thai)
+  ) {
+    throw new Error("Phiếu đặt cọc đã kết thúc");
+  }
+
+  await DatCocDAO.refund(maCoc, ghiChu);
+  await PhongDAO.updateStatus(deposit.ma_phong, "Trống");
+  await KhachHangDAO.updateStatus(deposit.ma_khach_hang, "Đang tư vấn");
 }
 
 export async function getStats() {
+  await syncOverdueDeposits();
   return DatCocDAO.getStats();
 }
 
 /** Returns decrypted image as base64 string */
-export async function getProofImage(id: number): Promise<{ base64: string; mimeType: string } | null> {
-  const deposit = await DatCocDAO.getById(id);
+export async function getProofImage(
+  maCoc: string,
+): Promise<{ base64: string; mimeType: string } | null> {
+  const deposit = await DatCocDAO.getById(maCoc);
   if (!deposit?.anh_chung_tu_encrypted) return null;
-  const { decryptToBase64 } = await import('../utils/encrypt');
+  const { decryptToBase64 } = await import("../utils/encrypt");
   const base64 = decryptToBase64(deposit.anh_chung_tu_encrypted);
-  return { base64, mimeType: (deposit as any).mime_type || 'image/jpeg' };
+  return { base64, mimeType: (deposit as any).mime_type || "image/jpeg" };
 }

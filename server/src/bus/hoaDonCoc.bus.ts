@@ -95,12 +95,19 @@ export async function uploadProof(
   }
   if (
     deposit.trang_thai !== "Chờ thanh toán" &&
-    deposit.trang_thai !== "Không hợp lệ"
+    deposit.trang_thai !== "Không hợp lệ" &&
+    deposit.trang_thai !== "Đang xử lý"
   ) {
     throw new Error("Phiếu đặt cọc chưa ở trạng thái có thể gửi chứng từ");
   }
 
   const encrypted = encryptBuffer(fileBuffer);
+  console.log("Encrypted proof image for deposit", {
+    id,
+    encryptedLength: encrypted.length,
+    mimeType,
+    phuongThuc,
+  });
   await HoaDonCocDAO.uploadProof(id, encrypted, mimeType, phuongThuc);
 }
 
@@ -119,7 +126,7 @@ export async function confirm(id: string, nguoiXacNhan: string) {
   if (deposit.ma_phong) {
     // If bed tracking was implemented here, we would update DangO.
     // For now, confirm room status is "Đã cọc" (or maybe "Đã thuê" depending on logic)
-    await query(`UPDATE Phong SET TrangThai='Đã cọc' WHERE MaPhong=$1`, [
+    await query(`UPDATE phong SET trang_thai='Đã cọc' WHERE ma_phong=$1`, [
       deposit.ma_phong,
     ]);
   }

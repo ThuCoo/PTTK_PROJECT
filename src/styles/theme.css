@@ -119,6 +119,17 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* Cursor pointer for all interactive elements */
+button,
+a[role="button"],
+[role="button"],
+select,
+input[type="checkbox"],
+input[type="radio"],
+[clickable] {
+  cursor: pointer;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

@@ -209,13 +209,7 @@ export async function getCustomer(maKhachHang: string) {
       sdt,
       email,
       cccd,
-      gioi_tinh,
-      so_nguoi,
-      khu_vuc,
-      loai_phong,
-      ngay_vao as ngay_vao,
-      trang_thai,
-      created_at
+      gioi_tinh
     FROM khach_hang
     WHERE ma_khach_hang = $1
     `,

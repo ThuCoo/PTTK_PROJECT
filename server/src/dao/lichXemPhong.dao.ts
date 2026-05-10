@@ -35,5 +35,4 @@ export async function updateStatus(
 export async function getTodayAppointments(): Promise<LichXemPhong[]> {
   // Table does not exist in schema
   return [];
-  return result.rows;
 }

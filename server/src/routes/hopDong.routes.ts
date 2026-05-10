@@ -68,7 +68,7 @@ router.post(
   requireQl,
   async (req: Request, res: Response) => {
     try {
-      await HopDongBUS.terminate(req.params.id);
+      await HopDongBUS.terminate(req.params.id as any);
       res.json({ success: true, message: "Hợp đồng đã kết thúc" });
     } catch (err: any) {
       res.status(400).json({ success: false, error: err.message });
@@ -79,10 +79,7 @@ router.post(
 router.post("/:id/room-return", async (req: Request, res: Response) => {
   try {
     const { roomReportNotes } = req.body;
-    const result = await HopDongBUS.roomReturn(
-      parseInt(req.params.id),
-      roomReportNotes,
-    );
+    const result = await HopDongBUS.roomReturn(req.params.id, roomReportNotes);
     res.json({ success: true, data: result });
   } catch (err: any) {
     res.status(400).json({ success: false, error: err.message });
@@ -91,10 +88,7 @@ router.post("/:id/room-return", async (req: Request, res: Response) => {
 
 router.post("/:id/members", async (req: Request, res: Response) => {
   try {
-    await HopDongBUS.addGroupMembers(
-      parseInt(req.params.id),
-      req.body.members || [],
-    );
+    await HopDongBUS.addGroupMembers(req.params.id, req.body.members || []);
     res.json({ success: true, message: "Đã thêm thành viên nhóm" });
   } catch (err: any) {
     res.status(400).json({ success: false, error: err.message });

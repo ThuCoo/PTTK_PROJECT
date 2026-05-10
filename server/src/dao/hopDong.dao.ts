@@ -71,7 +71,7 @@ export async function terminate(maHopDong: string | number): Promise<void> {
   );
 }
 
-export async function finalize(id: number): Promise<void> {
+export async function finalize(id: string): Promise<void> {
   await query(
     `UPDATE hop_dong SET trang_thai='Đã thanh lý' WHERE ma_hop_dong=$1`,
     [id],
@@ -88,16 +88,49 @@ export async function recordCheckoutTime(
   ]);
 }
 
-export async function getByStatus(trangThai: string): Promise<HopDong[]> {
-  const result = await query(
-    `SELECT hd.*, k.ho_ten as ten_khach, k.sdt as phone_khach
-     FROM hop_dong hd
-     LEFT JOIN khach_hang k ON hd.ma_khach_hang = k.ma_khach_hang
-     WHERE hd.trang_thai = $1
-     ORDER BY hd.ngay_lap DESC`,
-    [trangThai],
-  );
-  return result.rows;
+export async function getByStatus(trangThai: string): Promise<any[]> {
+  // Changed return type for flexibility
+  const sql = `
+    -- Sử dụng subquery (CTE) để tính toán số giường và danh sách phòng cho mỗi hợp đồng trước
+    WITH hop_dong_details AS (
+      SELECT
+        hg.ma_hop_dong,
+        COUNT(hg.ma_giuong) as so_luong_giuong,
+        -- string_agg dùng để nối tất cả mã phòng thành một chuỗi, ví dụ: "P101, P102"
+        string_agg(DISTINCT p.ma_phong, ', ') as danh_sach_phong
+      FROM hop_dong_giuong hg
+      LEFT JOIN giuong g ON hg.ma_giuong = g.ma_giuong
+      LEFT JOIN phong p ON g.ma_phong = p.ma_phong
+      GROUP BY hg.ma_hop_dong
+    )
+    -- Query chính để lấy thông tin hợp đồng
+    SELECT 
+      hd.ma_hop_dong,
+      hd.ngay_nhan_phong as ngay_bat_dau,
+      hd.trang_thai,
+      k.ho_ten as ten_khach,
+      -- Lấy dữ liệu đã tính toán từ subquery ở trên
+      COALESCE(hdd.so_luong_giuong, 0) as so_giuong, -- Nếu không có giường thì hiện số 0
+      hdd.danh_sach_phong as phong
+    FROM hop_dong hd
+    LEFT JOIN khach_hang k ON hd.ma_khach_hang = k.ma_khach_hang
+    -- Kết nối với kết quả của subquery
+    LEFT JOIN hop_dong_details hdd ON hd.ma_hop_dong = hdd.ma_hop_dong
+    WHERE hd.trang_thai = $1
+    ORDER BY hd.ngay_lap DESC
+  `;
+
+  const result = await query(sql, [trangThai]);
+
+  // Đảm bảo dữ liệu trả về có tên key đúng với UI của bạn
+  return result.rows.map((row) => ({
+    ma_hop_dong: row.ma_hop_dong,
+    ten_khach: row.ten_khach, // Đổi tên cho khớp UI
+    phong: row.phong || "Chưa có", // Nếu phòng là null thì hiện "Chưa có"
+    trang_thai_hd: row.trang_thai, // Đổi tên cho khớp UI
+    so_giuong: `${row.so_giuong}`, // Thêm chữ "giường" cho đẹp
+    ngay_bat_dau: row.ngay_bat_dau,
+  }));
 }
 
 export async function addGroupMembers(

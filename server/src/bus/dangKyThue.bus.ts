@@ -10,12 +10,19 @@ export async function getPendingForReview() {
     return [];
   }
 
-  // Enhance with room info for each form
+  // Enhance with room info for each form and normalize field names for frontend
   const formsWithRooms = await Promise.all(
     pending.map(async (form: any) => {
-      const rooms = await DangKyThueDAO.getSelectedRooms(form.id);
+      // DAO returns ma_phieu_dk as the form identifier
+      const maPhieu = form.ma_phieu_dk || form.ma_phieu_dang_ky || form.id;
+      const rooms = await DangKyThueDAO.getSelectedRooms(maPhieu);
       return {
+        // keep original fields
         ...form,
+        // normalized fields expected by frontend
+        ma_phieu_dang_ky: maPhieu,
+        ten_khach: form.ten_khach || form.ho_ten,
+        phone_khach: form.phone_khach || form.sdt,
         selected_rooms: rooms,
         room_count: rooms.length,
       };
@@ -28,17 +35,23 @@ export async function getPendingForReview() {
 /**
  * Step 2: Get form details when user selects a registration form
  */
-export async function getFormDetails(phieuDangKyId: number) {
-  const form = await DangKyThueDAO.getById(phieuDangKyId);
+export async function getFormDetails(maPhieuDangKy: string) {
+  const form = await DangKyThueDAO.getById(maPhieuDangKy);
   if (!form) {
     throw new Error("Không tìm thấy phiếu đăng ký thuê");
   }
 
-  const rooms = await DangKyThueDAO.getSelectedRooms(phieuDangKyId);
-  const customerInfo = await DangKyThueDAO.getCustomer(form.khach_hang_id);
+  const rooms = await DangKyThueDAO.getSelectedRooms(maPhieuDangKy);
+  const customerInfo = await DangKyThueDAO.getCustomer(
+    form.ma_khach_hang || form.khach_hang_id,
+  );
 
+  // normalize object for frontend
   return {
-    form,
+    form: {
+      ...form,
+      ma_phieu_dang_ky: form.ma_phieu_dk || form.ma_phieu_dang_ky,
+    },
     customer: customerInfo,
     selected_rooms: rooms,
   };
@@ -52,8 +65,8 @@ export async function getFormDetails(phieuDangKyId: number) {
  * Alternative Flow A3: Invalid information → throws error
  */
 export async function validateCustomerConditions(
-  customerId: number,
-  roomId: number,
+  customerId: string,
+  roomId: string,
 ) {
   // Get customer info
   const customer = await DangKyThueDAO.getCustomer(customerId);
@@ -115,7 +128,7 @@ export async function validateCustomerConditions(
  *
  * Alternative Flow A4: Room unavailable → throws error
  */
-export async function checkRoomAvailability(roomId: number) {
+export async function checkRoomAvailability(roomId: string) {
   const roomStatus = await DangKyThueDAO.getRoomStatus(roomId);
 
   if (!roomStatus) {
@@ -150,24 +163,26 @@ export async function checkRoomAvailability(roomId: number) {
  * Alternative Flow A5: System error → throws error (system will catch and show error message)
  */
 export async function confirmReview(
-  phieuDangKyId: number,
-  selectedRoomId: number,
+  maPhieuDangKy: string,
+  maPhong: string,
   ghiChu?: string,
 ) {
   // Validate inputs
-  if (!phieuDangKyId || !selectedRoomId) {
+  if (!maPhieuDangKy || !maPhong) {
     throw new Error("Lỗi hệ thống: Thông tin không hợp lệ (A5)");
   }
 
   try {
     // Final validation: ensure selected room is in the form's room list
-    const form = await DangKyThueDAO.getById(phieuDangKyId);
+    const form = await DangKyThueDAO.getById(maPhieuDangKy);
     if (!form) {
       throw new Error("Lỗi hệ thống: Không tìm thấy phiếu đăng ký (A5)");
     }
 
-    const selectedRooms = await DangKyThueDAO.getSelectedRooms(phieuDangKyId);
-    const roomExists = selectedRooms.some((r: any) => r.id === selectedRoomId);
+    const selectedRooms = await DangKyThueDAO.getSelectedRooms(maPhieuDangKy);
+    const roomExists = selectedRooms.some(
+      (r: any) => r.ma_phong === maPhong || r.id === maPhong,
+    );
 
     if (!roomExists) {
       throw new Error(
@@ -177,8 +192,8 @@ export async function confirmReview(
 
     // Record the confirmation
     const result = await DangKyThueDAO.confirmReview(
-      phieuDangKyId,
-      selectedRoomId,
+      maPhieuDangKy,
+      maPhong,
       ghiChu,
     );
 
@@ -190,8 +205,8 @@ export async function confirmReview(
     return {
       success: true,
       message: "Đã ghi nhận thông tin phòng thành công",
-      phieu_dang_ky_id: result.id,
-      phong_id_confirmed: result.phong_id_confirmed,
+      phieu_dang_ky_id: result.ma_phieu_dk || result.id,
+      phong_id_confirmed: result.phong_id_confirmed || result.ma_phong,
       trang_thai_xem_xet: result.trang_thai_xem_xet,
       ngay_xem_xet: result.ngay_xem_xet,
     };

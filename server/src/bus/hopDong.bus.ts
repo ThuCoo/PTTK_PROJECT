@@ -37,8 +37,7 @@ export async function create(data: {
   // Ensure deposit is confirmed
   const deposits = await DatCocDAO.getAll(undefined, "Đã xác nhận");
   const hasDeposit = deposits.some(
-    (d) =>
-      d.ma_phong === maPhong && d.ma_khach_hang === maKhachHang,
+    (d) => d.ma_phong === maPhong && d.ma_khach_hang === maKhachHang,
   );
   if (!hasDeposit)
     throw new Error(
@@ -90,11 +89,11 @@ export async function terminate(id: number) {
 }
 
 export async function addGroupMembers(
-  hopDongId: number,
+  hopDongId: string,
   members: ThanhVienNhom[],
 ) {
   if (!members.length) throw new Error("Phải có ít nhất 1 thành viên");
-  const hd = await HopDongDAO.getById(hopDongId);
+  const hd = await HopDongDAO.getById(String(hopDongId));
   if (!hd) throw new Error("Không tìm thấy hợp đồng");
   if (members.length > hd.so_giuong) {
     throw new Error(
@@ -106,11 +105,12 @@ export async function addGroupMembers(
     if (!m.ho_ten?.trim()) throw new Error("Họ tên thành viên là bắt buộc");
     if (!m.cccd?.trim()) throw new Error("CCCD thành viên là bắt buộc");
   }
-  await HopDongDAO.addGroupMembers(hopDongId, members);
+  await HopDongDAO.addGroupMembers(parseInt(String(hopDongId)), members);
 }
 
-export async function roomReturn(id: number, roomReportNotes: string) {
+export async function roomReturn(id: string, roomReportNotes: string) {
   // Step 1: Verify contract exists
+  console.log("Starting room return process for contract ID:", id);
   const hd = await HopDongDAO.getById(id);
   if (!hd) throw new Error("Không tìm thấy hợp đồng");
 
@@ -121,12 +121,6 @@ export async function roomReturn(id: number, roomReportNotes: string) {
 
   // Step 3: Check if all payments are completed (A1 - payment not completed)
   // For now, we'll use a simple check - in production, this would verify all invoices are paid
-  // This is where we would verify: không có phiếu thanh toán nào chưa thanh toán
-  // const unpaidPayments = await ThanhToanDAO.getAll(undefined, 'Chưa thanh toán');
-  // const hasUnpaidPayments = unpaidPayments.some(p => p.hop_dong_id === id);
-  // if (hasUnpaidPayments) {
-  //   throw new Error('Chưa hoàn tất thanh toán');
-  // }
 
   // Step 4: Verify room report exists (A2 - no room report)
   if (!roomReportNotes || !roomReportNotes.trim()) {
@@ -137,6 +131,7 @@ export async function roomReturn(id: number, roomReportNotes: string) {
   await HopDongDAO.finalize(id);
 
   // Step 6: Update room/bed status to "Trống" and record checkout time
+  // await PhongDAO.releaseResources(hd.ma_hop_dong);
   await PhongDAO.incrementOccupied(hd.phong_id, -hd.so_giuong);
   const phong = await PhongDAO.getById(hd.phong_id);
   if (phong && phong.dang_o === 0) {
@@ -145,7 +140,7 @@ export async function roomReturn(id: number, roomReportNotes: string) {
 
   // Step 7: Record checkout time
   const checkoutTime = new Date().toISOString();
-  await HopDongDAO.recordCheckoutTime(id, checkoutTime);
+  // await HopDongDAO.recordCheckoutTime(id, checkoutTime);
 
   return {
     success: true,

@@ -93,6 +93,12 @@ export function PreRentalReview() {
       setSuccessMessage(null);
       setIsProcessing(true);
 
+      // debug: log selected form to ensure it contains ma_phieu_dang_ky
+      try {
+        // eslint-disable-next-line no-console
+        console.debug("[PreRentalReview] handleSelectForm - form:", form);
+      } catch (e) {}
+
       // Fetch form details (use ma_phieu_dang_ky string id)
       const data = await dangKyThueApi.getById(form.ma_phieu_dang_ky);
       if (data.success) {
@@ -128,6 +134,19 @@ export function PreRentalReview() {
       setError(null);
       setSuccessMessage(null);
       setIsProcessing(true);
+
+      try {
+        // debug: log ids sent to validateConditions
+        // eslint-disable-next-line no-console
+        console.debug(
+          "[PreRentalReview] validateConditions - formId:",
+          selectedForm.ma_phieu_dang_ky,
+          "roomId:",
+          selectedRoom.ma_phong,
+          "khach_hang_id:",
+          formDetails.customer?.ma_khach_hang || formDetails.customer?.id,
+        );
+      } catch (e) {}
 
       const data = await dangKyThueApi.validateConditions(
         selectedForm.ma_phieu_dang_ky,
@@ -172,6 +191,17 @@ export function PreRentalReview() {
       setSuccessMessage(null);
       setIsProcessing(true);
 
+      try {
+        // debug: log ids sent to checkRoom
+        // eslint-disable-next-line no-console
+        console.debug(
+          "[PreRentalReview] checkRoom - formId:",
+          selectedForm.ma_phieu_dang_ky,
+          "roomId:",
+          selectedRoom.ma_phong,
+        );
+      } catch (e) {}
+
       const data = await dangKyThueApi.checkRoom(
         selectedForm.ma_phieu_dang_ky,
         selectedRoom.ma_phong,
@@ -209,6 +239,17 @@ export function PreRentalReview() {
       setError(null);
       setSuccessMessage(null);
       setIsProcessing(true);
+
+      try {
+        // debug: log ids sent to confirmReview
+        // eslint-disable-next-line no-console
+        console.debug(
+          "[PreRentalReview] confirmReview - formId:",
+          selectedForm.ma_phieu_dang_ky,
+          "roomId:",
+          selectedRoom.ma_phong,
+        );
+      } catch (e) {}
 
       const data = await dangKyThueApi.confirmReview(
         selectedForm.ma_phieu_dang_ky,

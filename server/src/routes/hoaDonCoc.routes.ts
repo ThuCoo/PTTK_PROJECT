@@ -17,12 +17,12 @@ router.get("/", async (req: Request, res: Response) => {
 });
 
 router.get("/phieu-dang-ky", async (req: Request, res: Response) => {
-    try {
-        const data = await HoaDonCocBUS.getAllPhieuDangKy();
-        res.json({ success: true, data });
-    } catch (err: any) {
-        res.status(500).json({ success: false, error: err.message });
-    }
+  try {
+    const data = await HoaDonCocBUS.getAllPhieuDangKy();
+    res.json({ success: true, data });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 router.get("/stats", async (_req: Request, res: Response) => {
@@ -101,6 +101,7 @@ router.post(
 router.post("/:id/confirm", requireQl, async (req: Request, res: Response) => {
   try {
     const nguoiXacNhan = `${req.user!.role === "quan_ly" ? "Quản lý" : "NV"} - ${req.user!.username}`;
+    console.log("Confirming deposit", { id: req.params.id, nguoiXacNhan });
     await HoaDonCocBUS.confirm(req.params.id, nguoiXacNhan);
     res.json({ success: true, message: "Xác nhận đặt cọc thành công" });
   } catch (err: any) {

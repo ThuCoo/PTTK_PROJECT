@@ -8,7 +8,17 @@ const api = axios.create({
 // Auto-attach JWT token to every request
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  // debug: log token presence and request url to help diagnose missing auth
+  try {
+    // keep this a debug log so it can be removed later
+    // eslint-disable-next-line no-console
+    console.debug("[api] request -> url:", config.url, " token:", !!token);
+  } catch (e) {}
+  if (token)
+    config.headers = {
+      ...(config.headers || {}),
+      Authorization: `Bearer ${token}`,
+    };
   return config;
 });
 

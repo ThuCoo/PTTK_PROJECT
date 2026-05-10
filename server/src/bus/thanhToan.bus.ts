@@ -15,28 +15,23 @@ export async function getById(id: string) {
 }
 
 export async function create(data: {
-  // Adapted to minimal `phieu_thanh_toan` schema. Extra monetary fields are ignored.
-  ma_phieu_kt?: string;
-  hinh_thuc?: string;
-  trang_thai?: string;
-  ma_nv_ke_toan?: string;
+  hop_dong_id: number;
+  thang: string;
+  tien_dien: number;
+  tien_nuoc: number;
+  phi_xe: number;
+  han_thanh_toan?: string;
 }) {
   const hd = await HopDongDAO.getById(data.hop_dong_id);
   if (!hd) throw new Error("Không tìm thấy hợp đồng");
   if (hd.trang_thai !== "Đang hiệu lực")
     throw new Error("Hợp đồng không đang hiệu lực");
-  // Generate code and create minimal payment record tied to the inspection (ma_phieu_kt) if provided.
-  const maPhieu = await generateNextCode(
-    "PT",
-    "phieu_thanh_toan",
-    "ma_phieu_tt",
-  );
+  const tienThue = hd.tong_tien_thue;
+  const tongTien = tienThue + data.tien_dien + data.tien_nuoc + data.phi_xe;
+  const maPhieu = await generateNextCode("PT", "thanh_toan", "ma_phieu");
+
   return ThanhToanDAO.create({
     ma_phieu_tt: maPhieu,
-    ma_phieu_kt: data.ma_phieu_kt,
-    hinh_thuc: data.hinh_thuc,
-    trang_thai: data.trang_thai || "Chờ thanh toán",
-    ma_nv_ke_toan: data.ma_nv_ke_toan,
   });
 }
 

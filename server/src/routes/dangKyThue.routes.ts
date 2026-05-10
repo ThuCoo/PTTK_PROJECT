@@ -32,7 +32,7 @@ router.get("/pending", async (_req: Request, res: Response) => {
  */
 router.get("/:id", async (req: Request, res: Response) => {
   try {
-    const phieuDangKyId = parseInt(req.params.id);
+    const phieuDangKyId = req.params.id;
     const formDetails = await DangKyThueBUS.getFormDetails(phieuDangKyId);
 
     res.json({
@@ -60,7 +60,7 @@ router.get("/:id", async (req: Request, res: Response) => {
  */
 router.post("/:id/validate-conditions", async (req: Request, res: Response) => {
   try {
-    const phieuDangKyId = parseInt(req.params.id);
+    const phieuDangKyId = req.params.id;
     const { room_id, khach_hang_id } = req.body;
 
     if (!room_id) {
@@ -74,7 +74,10 @@ router.post("/:id/validate-conditions", async (req: Request, res: Response) => {
     let customerId = khach_hang_id;
     if (!customerId) {
       const formDetails = await DangKyThueBUS.getFormDetails(phieuDangKyId);
-      customerId = formDetails.customer.id;
+      customerId =
+        formDetails.customer?.ma_khach_hang ||
+        formDetails.customer?.id ||
+        formDetails.form?.ma_khach_hang;
     }
 
     const validationResult = await DangKyThueBUS.validateCustomerConditions(
@@ -117,7 +120,7 @@ router.post("/:id/validate-conditions", async (req: Request, res: Response) => {
  */
 router.post("/:id/check-room/:roomId", async (req: Request, res: Response) => {
   try {
-    const roomId = parseInt(req.params.roomId);
+    const roomId = req.params.roomId;
 
     const roomCheck = await DangKyThueBUS.checkRoomAvailability(roomId);
 
@@ -160,7 +163,7 @@ router.post("/:id/check-room/:roomId", async (req: Request, res: Response) => {
  */
 router.post("/:id/confirm-review", async (req: Request, res: Response) => {
   try {
-    const phieuDangKyId = parseInt(req.params.id);
+    const phieuDangKyId = req.params.id;
     const { room_id, ghi_chu } = req.body;
 
     if (!room_id) {
@@ -212,7 +215,7 @@ router.post("/:id/confirm-review", async (req: Request, res: Response) => {
  */
 router.post("/:id/complete-review", async (req: Request, res: Response) => {
   try {
-    const phieuDangKyId = parseInt(req.params.id);
+    const phieuDangKyId = req.params.id;
     const { room_id } = req.body;
 
     if (!room_id) {

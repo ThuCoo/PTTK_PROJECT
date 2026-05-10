@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS users (
   username       VARCHAR(50)  UNIQUE NOT NULL,
   password_hash  VARCHAR(255) NOT NULL,
   ho_ten         VARCHAR(100) NOT NULL,
-  role           VARCHAR(20)  NOT NULL CHECK (role IN ('nhan_vien', 'quan_ly')),
+  role           VARCHAR(20)  NOT NULL CHECK (role IN ('nhan_vien', 'quan_ly', 'nv_sale', 'nv_phu_trach', 'nv_ke_toan', 'admin')),
   email          VARCHAR(100),
   created_at     TIMESTAMP DEFAULT NOW()
 );

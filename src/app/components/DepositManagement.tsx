@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { datCocApi } from "../../services/api";
 import { useAuth } from "../../contexts/AuthContext";
+import { formatVND } from "../../utils/formatUtils";
 
 const STATUS_COLOR: Record<string, string> = {
   "Đã xác nhận": "bg-green-100 text-green-700",
@@ -182,7 +183,7 @@ export function DepositManagement() {
   };
 
   const statCards = [
-    { label: "Tổng đặt cọc", value: stats?.tong ?? "—", color: "bg-blue-500" },
+    { label: "Tổng đặt cọc", value: stats?.tong ? formatVND(stats.tong) : "0", color: "bg-blue-500" },
     {
       label: "Chờ thanh toán",
       value: stats?.cho_thanh_toan ?? "—",
@@ -195,7 +196,7 @@ export function DepositManagement() {
     },
     {
       label: "Đã xác nhận",
-      value: stats?.da_xac_nhan ?? "—",
+      value: stats?.da_xac_nhan ? formatVND(stats.da_xac_nhan) : "0",
       color: "bg-green-500",
     },
   ];
@@ -325,7 +326,7 @@ export function DepositManagement() {
                           </td>
                           <td className="py-4 px-4">
                             <p className="font-bold">
-                              {Number(d.so_tien).toLocaleString()} VNĐ
+                              {formatVND(d.so_tien)} VNĐ
                             </p>
                           </td>
                           <td className="py-4 px-4">
@@ -417,7 +418,7 @@ export function DepositManagement() {
               <div className="p-4 bg-slate-50 rounded-lg">
                 <p className="text-sm text-slate-600 mb-1">Số tiền cọc</p>
                 <p className="font-bold text-2xl">
-                  {Number(selected.so_tien).toLocaleString()} VNĐ
+                  {formatVND(selected.so_tien)} VNĐ
                 </p>
                 <p className="text-xs text-slate-500 mt-1">
                   Công thức: 2 tháng × {selected.so_giuong} giường
@@ -482,7 +483,7 @@ export function DepositManagement() {
                 </div>
               )}
 
-              {isReviewState && user?.role === "quan_ly" && (
+              {isReviewState && ["nv_sale", "sale", "admin"].includes(user?.role || "") && (
                 <div className="pt-2 space-y-2">
                   <button
                     onClick={() => confirmMutation.mutate(selected.id)}
@@ -523,14 +524,14 @@ export function DepositManagement() {
                 </div>
               )}
 
-              {isReviewState && user?.role !== "quan_ly" && (
+              {isReviewState && !["nv_sale", "sale", "admin"].includes(user?.role || "") && (
                 <p className="text-xs text-slate-500 text-center italic">
-                  Chờ quản lý xác nhận chứng từ
+                  Chờ nhân viên sales xác nhận chứng từ
                 </p>
               )}
 
               {selected.trang_thai === "Không hợp lệ" &&
-                user?.role !== "quan_ly" && (
+                !["nv_sale", "sale", "admin"].includes(user?.role || "") && (
                   <p className="text-xs text-slate-500 text-center italic">
                     Chứng từ bị từ chối, vui lòng gửi lại ảnh giao dịch mới
                   </p>
@@ -568,7 +569,7 @@ export function DepositManagement() {
               <div className="p-4 bg-blue-50 rounded-lg">
                 <p className="text-sm text-slate-600">Số tiền cần thanh toán</p>
                 <p className="text-3xl font-bold text-blue-600">
-                  {Number(selected.so_tien).toLocaleString()} VNĐ
+                  {formatVND(selected.so_tien)} VNĐ
                 </p>
               </div>
 

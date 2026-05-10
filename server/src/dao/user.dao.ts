@@ -26,7 +26,7 @@ export async function createUser(
   username: string,
   passwordHash: string,
   hoTen: string,
-  role: 'nhan_vien' | 'quan_ly',
+  role: "nhan_vien" | "quan_ly" | "nv_sale" | "nv_phu_trach" | "nv_ke_toan" | "sale" | "phu_trach" | "ke_toan" | "admin",
   email?: string
 ): Promise<User> {
   const result = await query(

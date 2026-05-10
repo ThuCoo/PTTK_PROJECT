@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { CheckCircle, Bed, Users, MapPin, DollarSign, X, Home, Info, Trash2 } from 'lucide-react';
+import { formatVND } from '../../utils/formatUtils';
 
 const initialRoomsData = [
   {
@@ -656,7 +657,7 @@ export function RoomSelection() {
                             </div>
                             <div className="flex items-center gap-2 text-blue-600 font-medium">
                               <DollarSign className="w-4 h-4" />
-                              {room.price.toLocaleString()} VNĐ/tháng
+                              {formatVND(room.price)} VNĐ/tháng
                             </div>
                             <div className="flex flex-wrap gap-1 mt-2">
                               {room.amenities.map((amenity: string, idx: number) => (
@@ -701,7 +702,7 @@ export function RoomSelection() {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-slate-600">Giá thuê:</span>
-                    <p className="font-medium text-slate-900">{selectedRoom.price.toLocaleString()} VNĐ/tháng</p>
+                    <p className="font-medium text-slate-900">{formatVND(selectedRoom.price)} VNĐ/tháng</p>
                   </div>
                   <div>
                     <span className="text-slate-600">Sức chứa:</span>

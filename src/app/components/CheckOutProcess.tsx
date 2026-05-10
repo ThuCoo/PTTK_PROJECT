@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Search, AlertCircle, CheckCircle } from 'lucide-react';
+import { formatVND } from '../../utils/formatUtils';
 
 export function CheckOutProcess() {
   const [selectedCheckout, setSelectedCheckout] = useState<any>(null);
@@ -110,7 +111,7 @@ export function CheckOutProcess() {
                   <div>
                     <span className="text-slate-600">Tiền cọc:</span>
                     <p className="font-medium text-blue-600 mt-1">
-                      {selectedCheckout.depositAmount.toLocaleString()} VNĐ
+                      {formatVND(selectedCheckout.depositAmount)} VNĐ
                     </p>
                   </div>
                   <div>
@@ -175,13 +176,13 @@ export function CheckOutProcess() {
                   <div className="flex justify-between items-center pb-2">
                     <span className="text-sm text-slate-600">Tiền cọc ban đầu</span>
                     <span className="font-medium text-slate-900">
-                      {selectedCheckout.depositAmount.toLocaleString()} VNĐ
+                      {formatVND(selectedCheckout.depositAmount)} VNĐ
                     </span>
                   </div>
                   <div className="flex justify-between items-center pb-2">
                     <span className="text-sm text-slate-600">Tiền cọc được hoàn ({selectedCheckout.contractType === 'Hết hạn' ? '100%' : selectedCheckout.rentalMonths >= 6 ? '70%' : '50%'})</span>
                     <span className="font-medium text-green-600">
-                      {calculateRefund(selectedCheckout.contractType, selectedCheckout.rentalMonths, selectedCheckout.depositAmount).toLocaleString()} VNĐ
+                      {formatVND(calculateRefund(selectedCheckout.contractType, selectedCheckout.rentalMonths, selectedCheckout.depositAmount))} VNĐ
                     </span>
                   </div>
 
@@ -211,7 +212,7 @@ export function CheckOutProcess() {
                     <div className="flex justify-between items-center">
                       <span className="font-bold text-slate-900">Số tiền hoàn lại thực tế</span>
                       <span className="font-bold text-green-600 text-xl">
-                        {calculateRefund(selectedCheckout.contractType, selectedCheckout.rentalMonths, selectedCheckout.depositAmount).toLocaleString()} VNĐ
+                        {formatVND(calculateRefund(selectedCheckout.contractType, selectedCheckout.rentalMonths, selectedCheckout.depositAmount))} VNĐ
                       </span>
                     </div>
                   </div>

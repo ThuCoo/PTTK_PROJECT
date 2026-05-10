@@ -2,11 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { Users, Bed, DollarSign, Clock, RefreshCw } from "lucide-react";
 import { dashboardApi } from "../../services/api";
 import { useAuth } from "../../contexts/AuthContext";
+import { formatVND } from "../../utils/formatUtils";
 
 function formatCurrency(amount: number): string {
-  if (amount >= 1_000_000) return `${(amount / 1_000_000).toFixed(0)}M`;
-  if (amount >= 1_000) return `${(amount / 1_000).toFixed(0)}K`;
-  return amount.toString();
+  return formatVND(amount);
 }
 
 function timeAgo(dateStr: string): string {

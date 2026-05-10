@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { FileText, Search, Download, Eye, Calendar, User } from 'lucide-react';
+import { formatVND } from '../../utils/formatUtils';
 
 export function ContractManagement() {
   const [selectedContract, setSelectedContract] = useState<any>(null);
@@ -168,7 +169,7 @@ export function ContractManagement() {
                     </div>
                     <div>
                       <p className="text-slate-600">Giá thuê/tháng</p>
-                      <p className="font-medium text-blue-600">{contract.totalRent.toLocaleString()} VNĐ</p>
+                      <p className="font-medium text-blue-600">{formatVND(contract.totalRent)} VNĐ</p>
                     </div>
                   </div>
                 </div>
@@ -231,17 +232,17 @@ export function ContractManagement() {
 
                 <div>
                   <p className="text-sm text-slate-600 mb-1">Giá thuê/giường/tháng</p>
-                  <p className="font-bold text-slate-900">{selectedContract.rentPerBed.toLocaleString()} VNĐ</p>
+                  <p className="font-bold text-slate-900">{formatVND(selectedContract.rentPerBed)} VNĐ</p>
                 </div>
 
                 <div>
                   <p className="text-sm text-slate-600 mb-1">Tổng tiền thuê/tháng</p>
-                  <p className="font-bold text-lg text-blue-600">{selectedContract.totalRent.toLocaleString()} VNĐ</p>
+                  <p className="font-bold text-lg text-blue-600">{formatVND(selectedContract.totalRent)} VNĐ</p>
                 </div>
 
                 <div>
                   <p className="text-sm text-slate-600 mb-1">Tiền cọc</p>
-                  <p className="font-medium text-slate-900">{selectedContract.deposit.toLocaleString()} VNĐ</p>
+                  <p className="font-medium text-slate-900">{formatVND(selectedContract.deposit)} VNĐ</p>
                 </div>
 
                 {selectedContract.signedDate && (

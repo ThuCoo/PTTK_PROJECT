@@ -85,13 +85,39 @@ async function initDB() {
       await AuthBUS.createUser(
         "admin",
         "password123",
-        "Quản lý",
-        "quan_ly",
+        "Quản trị viên",
+        "admin",
         "admin@example.com",
       );
       console.log("Demo user 'admin' created");
     } catch (err: any) {
       console.log("Admin user setup skipped:", err.message || err);
+    }
+
+    try {
+      await AuthBUS.createUser(
+        "quanly",
+        "password123",
+        "Quản lý",
+        "quan_ly",
+        "quanly@example.com",
+      );
+      console.log("Demo user 'quanly' created");
+    } catch (err: any) {
+      console.log("Quanly user setup skipped:", err.message || err);
+    }
+
+    try {
+      await AuthBUS.createUser(
+        "nvsale",
+        "password123",
+        "Nhân viên Sale",
+        "nv_sale",
+        "nvsale@example.com",
+      );
+      console.log("Demo user 'nvsale' created");
+    } catch (err: any) {
+      console.log("Nvsale user setup skipped:", err.message || err);
     }
 
     try {

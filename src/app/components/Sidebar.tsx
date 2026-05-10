@@ -19,7 +19,7 @@ import {
 interface SidebarUser {
   username: string;
   ho_ten: string;
-  role: "nhan_vien" | "quan_ly" | "nv_sale" | "nv_phu_trach" | "nv_ke_toan" | "sale" | "phu_trach" | "ke_toan";
+  role: "nhan_vien" | "quan_ly" | "nv_sale" | "nv_phu_trach" | "nv_ke_toan" | "sale" | "phu_trach" | "ke_toan" | "admin";
   email?: string;
 }
 
@@ -45,7 +45,7 @@ export function Sidebar({
     { id: "preRentalReview", label: "Rà soát điều kiện & tình trạng", icon: CheckSquare, roles: ['quan_ly', 'nv_sale', 'sale'] },
     { id: "availability", label: "Kiểm tra tình trạng", icon: Filter, roles: ['quan_ly', 'nv_sale', 'sale'] },
     { id: "contracts", label: "Hợp đồng", icon: FileText, roles: ['quan_ly', 'nv_phu_trach', 'phu_trach'] },
-    { id: "deposits", label: "Đặt cọc", icon: DollarSign, roles: ['quan_ly', 'nv_ke_toan', 'ke_toan'] },
+    { id: "deposits", label: "Đặt cọc", icon: DollarSign, roles: ['nv_sale', 'sale'] },
     { id: "checkin", label: "Nhận phòng", icon: LogIn, roles: ['quan_ly'] },
     { id: "checkout", label: "Trả phòng", icon: LogOutIcon, roles: ['quan_ly', 'nv_sale', 'sale'] },
     { id: "roomReturn", label: "Hoàn trả phòng", icon: Building2, roles: ['quan_ly'] },
@@ -55,7 +55,7 @@ export function Sidebar({
   ];
 
   const visibleItems = menuItems.filter(item => 
-    item.roles.includes('*') || (user?.role && item.roles.includes(user.role))
+    item.roles.includes('*') || user?.role === 'admin' || (user?.role && item.roles.includes(user.role))
   );
 
   return (
@@ -105,7 +105,7 @@ export function Sidebar({
             </p>
             <p className="truncate text-sm text-slate-400">
               {user?.email ??
-                (user?.role === "quan_ly" ? "Quản lý" : "Nhân viên")}
+                (user?.role === "quan_ly" ? "Quản lý" : user?.role === "admin" ? "Quản trị viên" : "Nhân viên")}
             </p>
           </div>
           {onLogout && (

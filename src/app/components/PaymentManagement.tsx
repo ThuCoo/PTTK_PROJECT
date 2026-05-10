@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { DollarSign, Search, CheckCircle, Clock, AlertTriangle, RefreshCw } from 'lucide-react';
 import { thanhToanApi } from '../../services/api';
+import { formatVND } from '../../utils/formatUtils';
 
 const STATUS_COLOR: Record<string, string> = {
   'Đã thanh toán': 'bg-green-100 text-green-700',
@@ -74,7 +75,7 @@ export function PaymentManagement() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-600 mb-1">{s.label}</p>
-                <p className="text-3xl font-bold text-slate-900">{Number(s.value).toLocaleString()}đ</p>
+                <p className="text-3xl font-bold text-slate-900">{formatVND(s.value)}đ</p>
               </div>
               <div className={`${s.color} w-12 h-12 rounded-lg flex items-center justify-center`}>
                 <DollarSign className="w-6 h-6 text-white" />
@@ -141,7 +142,7 @@ export function PaymentManagement() {
                         <p className="text-xs text-slate-600">Hạn: {p.han_thanh_toan ? new Date(p.han_thanh_toan).toLocaleDateString('vi-VN') : '—'}</p>
                       </td>
                       <td className="py-4 px-4">
-                        <p className="font-bold text-slate-900">{Number(p.tong_tien).toLocaleString()} VNĐ</p>
+                        <p className="font-bold text-slate-900">{formatVND(p.tong_tien)} VNĐ</p>
                       </td>
                       <td className="py-4 px-4">
                         <span className={`px-3 py-1 rounded-full text-xs ${STATUS_COLOR[p.trang_thai] || 'bg-slate-100 text-slate-700'}`}>
@@ -190,25 +191,25 @@ export function PaymentManagement() {
                   <h3 className="text-sm font-medium text-slate-900 mb-3">Chi tiết các khoản</h3>
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-600">Tiền thuê phòng</span>
-                    <span className="font-medium text-slate-900">{Number(selected.tien_thue).toLocaleString()} VNĐ</span>
+                    <span className="font-medium text-slate-900">{formatVND(selected.tien_thue)} VNĐ</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-600">Tiền điện</span>
-                    <span className="font-medium text-slate-900">{Number(selected.tien_dien).toLocaleString()} VNĐ</span>
+                    <span className="font-medium text-slate-900">{formatVND(selected.tien_dien)} VNĐ</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-600">Tiền nước</span>
-                    <span className="font-medium text-slate-900">{Number(selected.tien_nuoc).toLocaleString()} VNĐ</span>
+                    <span className="font-medium text-slate-900">{formatVND(selected.tien_nuoc)} VNĐ</span>
                   </div>
                   {selected.phi_xe > 0 && (
                     <div className="flex justify-between text-sm">
                       <span className="text-slate-600">Phí gửi xe</span>
-                      <span className="font-medium text-slate-900">{Number(selected.phi_xe).toLocaleString()} VNĐ</span>
+                      <span className="font-medium text-slate-900">{formatVND(selected.phi_xe)} VNĐ</span>
                     </div>
                   )}
                   <div className="flex justify-between text-sm pt-2 border-t border-slate-200">
                     <span className="font-bold text-slate-900">Tổng cộng</span>
-                    <span className="font-bold text-blue-600 text-lg">{Number(selected.tong_tien).toLocaleString()} VNĐ</span>
+                    <span className="font-bold text-blue-600 text-lg">{formatVND(selected.tong_tien)} VNĐ</span>
                   </div>
                 </div>
 

@@ -40,7 +40,7 @@ export async function createUser(
   username: string,
   password: string,
   hoTen: string,
-  role: "nhan_vien" | "quan_ly" | "nv_sale" | "nv_phu_trach" | "nv_ke_toan" | "sale" | "phu_trach" | "ke_toan",
+  role: "nhan_vien" | "quan_ly" | "nv_sale" | "nv_phu_trach" | "nv_ke_toan" | "sale" | "phu_trach" | "ke_toan" | "admin",
   email?: string
 ): Promise<User> {
   const existing = await UserDAO.findByUsername(username);

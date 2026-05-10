@@ -3,14 +3,14 @@ export interface User {
   id: number;
   username: string;
   ho_ten: string;
-  role: "nhan_vien" | "quan_ly" | "nv_sale" | "nv_phu_trach" | "nv_ke_toan" | "sale" | "phu_trach" | "ke_toan";
+  role: "nhan_vien" | "quan_ly" | "nv_sale" | "nv_phu_trach" | "nv_ke_toan" | "sale" | "phu_trach" | "ke_toan" | "admin";
   email?: string;
 }
 
 export interface JwtPayload {
   userId: number;
   username: string;
-  role: "nhan_vien" | "quan_ly" | "nv_sale" | "nv_phu_trach" | "nv_ke_toan" | "sale" | "phu_trach" | "ke_toan";
+  role: "nhan_vien" | "quan_ly" | "nv_sale" | "nv_phu_trach" | "nv_ke_toan" | "sale" | "phu_trach" | "ke_toan" | "admin";
 }
 
 // ─── Room ────────────────────────────────────────────────────────────────────

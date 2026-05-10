@@ -47,6 +47,16 @@ export function requireSales(req: Request, res: Response, next: NextFunction): v
   next();
 }
 
+/** Allow both 'quan_ly' and 'sale' roles */
+export function requireManagerOrSales(req: Request, res: Response, next: NextFunction): void {
+  const role = req.user?.role as any;
+  if (role !== 'quan_ly' && role !== 'nv_sale' && role !== 'sale') {
+    res.status(403).json({ success: false, error: 'Cần quyền Quản lý hoặc Sales để thực hiện' });
+    return;
+  }
+  next();
+}
+
 /** Only allow 'phu_trach' role */
 export function requireOfficer(req: Request, res: Response, next: NextFunction): void {
   const role = req.user?.role as any;

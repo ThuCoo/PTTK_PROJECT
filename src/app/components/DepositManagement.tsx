@@ -441,11 +441,18 @@ export function DepositManagement() {
               )}
 
               {selected.nguoi_xac_nhan && (
+                 <>
                 <div>
                   <p className="text-sm text-slate-600 mb-1">Người xác nhận</p>
                   <p className="font-medium">{selected.nguoi_xac_nhan}</p>
                 </div>
+                <div>
+                    <p className="text-sm text-slate-600 mb-1">Ngày xác nhận</p>
+                    <p className="font-medium text-slate-900">{selected.ngay_xac_nhan}</p>
+                </div>
+                </>
               )}
+
 
               {reviewNote && selected.trang_thai === "Không hợp lệ" && (
                 <div className="rounded-lg border border-rose-100 bg-rose-50 p-4 text-sm text-rose-700">

@@ -71,7 +71,7 @@ export async function finalize(id: string): Promise<void> {
 }
 
 export async function recordCheckoutTime(
-  id: number,
+  id: string,
   checkoutTime: string,
 ): Promise<void> {
   await query(`UPDATE hop_dong SET ngay_tra_thuc_te=$1 WHERE ma_hop_dong=$2`, [
@@ -79,47 +79,61 @@ export async function recordCheckoutTime(
     id,
   ]);
 }
-
-export async function getByStatus(trangThai: string): Promise<any[]> { // Changed return type for flexibility
+export async function getByStatus(trangThai: string): Promise<any[]> {
   const sql = `
-    -- Sử dụng subquery (CTE) để tính toán số giường và danh sách phòng cho mỗi hợp đồng trước
-    WITH hop_dong_details AS (
-      SELECT
+    -- Bước 1: Gom tất cả tài nguyên (giường/phòng) của hợp đồng vào một bảng tạm
+    WITH hop_dong_resources AS (
+      -- Nhánh 1: Lấy từ thuê giường (Ở ghép)
+      SELECT 
         hg.ma_hop_dong,
-        COUNT(hg.ma_giuong) as so_luong_giuong,
-        -- string_agg dùng để nối tất cả mã phòng thành một chuỗi, ví dụ: "P101, P102"
-        string_agg(DISTINCT p.ma_phong, ', ') as danh_sach_phong
+        g.ma_phong,
+        hg.ma_giuong
       FROM hop_dong_giuong hg
-      LEFT JOIN giuong g ON hg.ma_giuong = g.ma_giuong
-      LEFT JOIN phong p ON g.ma_phong = p.ma_phong
-      GROUP BY hg.ma_hop_dong
+      JOIN giuong g ON hg.ma_giuong = g.ma_giuong
+
+      UNION -- Dùng UNION để gộp kết quả
+
+      -- Nhánh 2: Lấy từ thuê phòng (Nguyên phòng)
+      -- Đối với thuê phòng, ta lấy tất cả giường thuộc phòng đó
+      SELECT 
+        hp.ma_hop_dong,
+        hp.ma_phong,
+        g.ma_giuong
+      FROM hop_dong_phong hp
+      JOIN giuong g ON hp.ma_phong = g.ma_phong
+    ),
+    -- Bước 2: Nhóm lại để tính tổng số lượng
+    hop_dong_summary AS (
+      SELECT
+        ma_hop_dong,
+        COUNT(DISTINCT ma_giuong) as tong_so_giuong,
+        string_agg(DISTINCT ma_phong, ', ') as danh_sach_phong
+      FROM hop_dong_resources
+      GROUP BY ma_hop_dong
     )
-    -- Query chính để lấy thông tin hợp đồng
+    -- Bước 3: Query chính kết nối với thông tin khách hàng
     SELECT 
       hd.ma_hop_dong,
       hd.ngay_nhan_phong as ngay_bat_dau,
       hd.trang_thai,
       k.ho_ten as ten_khach,
-      -- Lấy dữ liệu đã tính toán từ subquery ở trên
-      COALESCE(hdd.so_luong_giuong, 0) as so_giuong, -- Nếu không có giường thì hiện số 0
-      hdd.danh_sach_phong as phong
+      hds.tong_so_giuong,
+      hds.danh_sach_phong
     FROM hop_dong hd
     LEFT JOIN khach_hang k ON hd.ma_khach_hang = k.ma_khach_hang
-    -- Kết nối với kết quả của subquery
-    LEFT JOIN hop_dong_details hdd ON hd.ma_hop_dong = hdd.ma_hop_dong
+    LEFT JOIN hop_dong_summary hds ON hd.ma_hop_dong = hds.ma_hop_dong
     WHERE hd.trang_thai = $1
     ORDER BY hd.ngay_lap DESC
   `;
   
   const result = await query(sql, [trangThai]);
 
-  // Đảm bảo dữ liệu trả về có tên key đúng với UI của bạn
   return result.rows.map(row => ({
     ma_hop_dong: row.ma_hop_dong,
-    ten_khach: row.ten_khach, // Đổi tên cho khớp UI
-    phong: row.phong || 'Chưa có', // Nếu phòng là null thì hiện "Chưa có"
-    trang_thai_hd: row.trang_thai, // Đổi tên cho khớp UI
-    so_giuong: `${row.so_giuong}`, // Thêm chữ "giường" cho đẹp
+    ten_khach: row.ten_khach, 
+    phong: row.danh_sach_phong || 'N/A', 
+    trang_thai_hd: row.trang_thai, 
+    so_giuong: `${row.tong_so_giuong}`, 
     ngay_bat_dau: row.ngay_bat_dau,
   }));
 }
@@ -171,7 +185,7 @@ export async function getAllPending() {
      LEFT JOIN phieu_dang_ky_giuong pdk_g ON pdk.ma_phieu_dk = pdk_g.ma_phieu_dk
      LEFT JOIN giuong g ON pdk_g.ma_giuong = g.ma_giuong
      LEFT JOIN phong p_from_g ON g.ma_phong = p_from_g.ma_phong
-     WHERE h.trang_thai = 'Đã thanh toán' 
+     WHERE h.trang_thai = 'Đã xác nhận' 
        AND NOT EXISTS (SELECT 1 FROM hop_dong hd WHERE hd.ma_hoa_don = h.ma_hoa_don AND hd.trang_thai <> 'Chờ ký')
      ORDER BY h.ma_hoa_don`
   );
@@ -195,56 +209,98 @@ export async function updateStatus(maHopDong: string, trangThai: 'Đang hiệu l
   return { success: true };
 }
 export async function getDetailsByDepositCode(maHoaDonCoc: string) {
-  // --- Query 1: Lấy thông tin chính ---
+  // =====================================================================
+  // QUERY 1: Lấy thông tin Hóa đơn, Khách hàng, Phiếu ĐK và Phòng (Gộp 4 câu query cũ)
+  // =====================================================================
   const mainInfoResult = await query(
     `SELECT 
-        h.ma_hoa_don as MaHoaDon, h.so_tien_coc as SoTienCoc,
-        pdk.ma_phieu_dk as MaPhieuDK, pdk.hinh_thuc_thue as HinhThucThue,
-        k.ma_khach_hang as MaKhachHang, k.ho_ten as TenKhachHang,
-        p.ma_phong as MaPhong, p.khu_vuc as KhuVuc, p.gia_thue_phong as GiaThuePhong
+        h.ma_hoa_don, 
+        h.so_tien_coc,
+        pdk.ma_phieu_dk, 
+        pdk.hinh_thuc_thue,
+        k.ma_khach_hang, 
+        k.ho_ten as ten_khach_hang,
+        
+        -- Lấy thông tin phòng dựa vào hình thức thuê
+        -- COALESCE lấy giá trị đầu tiên KHÔNG NULL
+        COALESCE(p_nguyen.ma_phong, p_ghep.ma_phong) as ma_phong,
+        COALESCE(p_nguyen.khu_vuc, p_ghep.khu_vuc) as khu_vuc,
+        COALESCE(p_nguyen.gia_thue_phong, p_ghep.gia_thue_phong) as gia_thue_phong
+        
      FROM hoa_don_coc h
      JOIN phieu_dang_ky pdk ON h.ma_phieu_dk = pdk.ma_phieu_dk
      JOIN khach_hang k ON pdk.ma_khach_hang = k.ma_khach_hang
+     
+     -- Nhánh 1: Nếu là Thuê nguyên phòng
      LEFT JOIN phieu_dang_ky_phong pdk_p ON pdk.ma_phieu_dk = pdk_p.ma_phieu_dk
-     LEFT JOIN phong p ON pdk_p.ma_phong = p.ma_phong
+     LEFT JOIN phong p_nguyen ON pdk_p.ma_phong = p_nguyen.ma_phong
+     
+     -- Nhánh 2: Nếu là Ở ghép (Phải lấy ID phòng thông qua ID giường đầu tiên)
+     LEFT JOIN (
+        SELECT ma_phieu_dk, MAX(ma_giuong) as ma_giuong 
+        FROM phieu_dang_ky_giuong GROUP BY ma_phieu_dk
+     ) pdk_g ON pdk.ma_phieu_dk = pdk_g.ma_phieu_dk
+     LEFT JOIN giuong g ON pdk_g.ma_giuong = g.ma_giuong
+     LEFT JOIN phong p_ghep ON g.ma_phong = p_ghep.ma_phong
+     
      WHERE h.ma_hoa_don = $1`,
     [maHoaDonCoc]
   );
+
   if (mainInfoResult.rows.length === 0) return null;
   const mainInfo = mainInfoResult.rows[0];
 
-  // --- Query 2: Lấy danh sách thành viên ---
+  // =====================================================================
+  // QUERY 2: Lấy danh sách thành viên
+  // =====================================================================
   const membersResult = await query(
-    `SELECT kh.ho_ten as HoTen, kh.cccd as CCCD
+    `SELECT kh.ho_ten, kh.cccd, kh.sdt, kh.ngay_sinh
      FROM phieu_dang_ky_khach_hang pk
      JOIN khach_hang kh ON pk.ma_khach_hang = kh.ma_khach_hang
      WHERE pk.ma_phieu_dk = $1`,
-    [mainInfo.MaPhieuDK]
+    [mainInfo.ma_phieu_dk]
   );
   mainInfo.members = membersResult.rows;
 
-  // --- Query 3: Lấy danh sách dịch vụ đi kèm ---
-  // Giả sử bạn có bảng HopDong_DichVu hoặc Phong_DichVu, ở đây dùng tạm logic mẫu
-  const servicesResult = await query(
-    `SELECT dv.ten_dich_vu as TenDichVu, dv.don_gia as DonGia
-     FROM dich_vu dv
-     JOIN dich_vu_chi_nhanh dvc ON dv.ma_dich_vu = dvc.ma_dich_vu
-     JOIN phong p ON dvc.ma_chi_nhanh = p.ma_chi_nhanh
-     WHERE p.ma_phong = $1`,
-    [mainInfo.MaPhong]
-  );
-  mainInfo.services = servicesResult.rows;
-  
-  // --- Query 4: Lấy danh sách giường đã gán ---
+  // =====================================================================
+  // QUERY 3: Lấy danh sách giường (Xử lý thông minh cả 2 TH)
+  // =====================================================================
+  // Dù là thuê phòng hay thuê giường, ta chỉ cần 1 câu query này:
   const bedsResult = await query(
-    `SELECT g.ma_giuong as MaGiuong, g.gia_thue_giuong as GiaThueGiuong
-     FROM phieu_dang_ky_giuong pg
-     JOIN giuong g ON pg.ma_giuong = g.ma_giuong
-     WHERE pg.ma_phieu_dk = $1`,
-    [mainInfo.MaPhieuDK]
+    `SELECT g.ma_giuong, g.gia_thue_giuong, g.trang_thai
+     FROM giuong g
+     WHERE 
+        -- Nếu là thuê giường: lấy các giường nằm trong phieu_dang_ky_giuong
+        g.ma_giuong IN (SELECT ma_giuong FROM phieu_dang_ky_giuong WHERE ma_phieu_dk = $1)
+        OR 
+        -- Nếu là thuê phòng: lấy TẤT CẢ các giường thuộc phòng đó
+        g.ma_phong IN (SELECT ma_phong FROM phieu_dang_ky_phong WHERE ma_phieu_dk = $1)`,
+    [mainInfo.ma_phieu_dk]
   );
   mainInfo.beds = bedsResult.rows;
 
+  // =====================================================================
+  // QUERY 4: Lấy danh sách dịch vụ của phòng đó
+  // =====================================================================
+  if (mainInfo.ma_phong) {
+    const servicesResult = await query(
+      `SELECT dv.ma_dich_vu, dv.ten_dich_vu, dv.don_gia, dv.don_vi_tinh
+       FROM dich_vu dv
+       JOIN dich_vu_chi_nhanh dvc ON dv.ma_dich_vu = dvc.ma_dich_vu
+       JOIN phong p ON dvc.ma_chi_nhanh = p.ma_chi_nhanh
+       WHERE p.ma_phong = $1`,
+      [mainInfo.ma_phong]
+    );
+    mainInfo.services = servicesResult.rows;
+  } else {
+    mainInfo.services = [];
+  }
+  // lấy mã hợp động
+  const contractResult = await query(
+    `SELECT ma_hop_dong FROM hop_dong WHERE ma_hoa_don = $1`,
+    [mainInfo.ma_hoa_don]
+  );
+  mainInfo.ma_hop_dong = contractResult.rows.length > 0 ? contractResult.rows[0].ma_hop_dong : null;
   return mainInfo;
 }
 // Thêm hàm này vào file src/dao/hopDong.dao.ts

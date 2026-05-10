@@ -180,7 +180,6 @@ export async function updateStatus(maHopDong: string, trangThai: 'Đang hiệu l
   );
   return { success: true };
 }
-
 export async function getOrCreateContractDetails(maHoaDonCoc: string) {
   // 1. Kiểm tra/Tạo hợp đồng trong DB
   const contract = await HopDongDAO.getOrCreate(maHoaDonCoc);
@@ -188,42 +187,50 @@ export async function getOrCreateContractDetails(maHoaDonCoc: string) {
   // 2. Lấy toàn bộ dữ liệu liên quan từ DAO
   const details = await HopDongDAO.getDetailsByDepositCode(maHoaDonCoc);
   if (!details) throw new Error("Không tìm thấy thông tin chi tiết của hồ sơ này.");
-
+  console.log('details ', details)
+  
   // 3. TÍNH TOÁN TIỀN THUÊ CƠ BẢN (monthlyRent)
   let monthlyRent = 0;
-  if (details.hinhthucthue === 'Thuê nguyên phòng') {
-    monthlyRent = parseFloat(details.giathuephong);
+  // Đã sửa thành hinh_thuc_thue
+  if (details.hinh_thuc_thue === 'Thuê nguyên phòng') {
+    // Đã sửa thành gia_thue_phong
+    monthlyRent = parseFloat(details.gia_thue_phong || "0");
   } else { // 'Ở ghép'
-    // Cộng dồn tiền của từng giường đã chọn
-    monthlyRent = details.beds.reduce((total: number, bed: any) => total + parseFloat(bed.giathuegiuong), 0);
+    // Đã sửa thành gia_thue_giuong
+    monthlyRent = (details.beds || []).reduce((total: number, bed: any) => 
+        total + parseFloat(bed.gia_thue_giuong || "0"), 0);
   }
   
   // 4. TÍNH TOÁN TIỀN DỊCH VỤ
-  const serviceFee = details.services.reduce((total: number, service: any) => total + parseFloat(service.dongia), 0);
+  // Đã sửa thành don_gia
+  const serviceFee = (details.services || []).reduce((total: number, service: any) => 
+      total + parseFloat(service.don_gia || "0"), 0);
+      
   const estimatedUtilityFee = 200000; // Tiền điện nước ước tính, có thể lấy từ config
   
-  // 5. MAP VÀ TRẢ VỀ CHO UI
+  // 5. MAP VÀ TRẢ VỀ CHO UI (KHÔNG ĐỔI TÊN KEY ĐỂ BẢO VỆ CLIENT)
   return {
     // Thông tin từ hợp đồng
-    contractId: contract.MaHopDong,
-    contractStatus: contract.TrangThai,
+    contractId: contract.ma_hop_dong,
+    // Cover cả 2 TH lỡ DAO của bạn trả về chữ Hoa hay Thường
+    contractStatus: contract.trang_thai || contract.TrangThai, 
     startDate: new Date().toLocaleDateString('vi-VN'),
     endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toLocaleDateString('vi-VN'),
     
     // Thông tin từ phiếu cọc
-    depositCode: details.mahoadon,
-    customerName: details.tenkhachhang,
-    room: details.maphong,
-    area: details.khuvuc,
-    numBeds: details.beds.length,
+    depositCode: details.ma_hoa_don,
+    customerName: details.ten_khach_hang,
+    room: details.ma_phong,
+    area: details.khu_vuc,
+    numBeds: details.beds ? details.beds.length : 0,
     
     // Danh sách thành viên
-    members: details.members.map((m: any) => ({
-      fullName: m.hoten,
+    members: (details.members || []).map((m: any) => ({
+      fullName: m.ho_ten, // Đã sửa m.hoten -> m.ho_ten
       idCard: m.cccd
     })),
     
-    // Chi phí đã tính toán
+    // Chi phí đã tính toán (Các key này giữ nguyên 100%)
     monthlyRent: monthlyRent,
     serviceFee: serviceFee,
     estimatedUtilityFee: estimatedUtilityFee,

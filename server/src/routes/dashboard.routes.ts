@@ -5,36 +5,30 @@ import * as DatCocDAO from '../dao/datCoc.dao';
 import * as HopDongDAO from '../dao/hopDong.dao';
 import * as ThanhToanDAO from '../dao/thanhToan.dao';
 import * as LichXemPhongDAO from '../dao/lichXemPhong.dao';
+// import * as DashboardDAO from '../dao/dashboard.dao';
 import { authMiddleware } from '../middleware/auth';
+import { DashboardDAO } from '../dao/dashboard.dao';
 
 const router = Router();
 router.use(authMiddleware);
 
 router.get('/', async (_req: Request, res: Response) => {
   try {
-    const [phongStats, khachCount, thanhToanStats, todayAppointments, recentActivity] =
-      await Promise.all([
-        PhongDAO.getStats(),
-        KhachHangDAO.countAll(),
-        ThanhToanDAO.getStats(),
-        LichXemPhongDAO.getTodayAppointments(),
-        ThanhToanDAO.getRecentActivity(4),
-      ]);
+    // Chỉ gọi đúng 1 hàm, DB lo toàn bộ logic tính toán
+    const overviewData = await DashboardDAO.getOverview();
 
     res.json({
       success: true,
       data: {
-        tong_khach_hang: khachCount,
-        phong_dang_thue: phongStats.dang_thue,
-        phong_trong: phongStats.trong,
-        doanh_thu_thang: thanhToanStats.da_thu,
-        lich_xem_hom_nay: todayAppointments,
-        hoat_dong_gan_day: recentActivity,
+        tong_khach_hang: parseInt(overviewData.tong_khach_hang),
+        phong_dang_thue: parseInt(overviewData.phong_dang_thue),
+        phong_trong: parseInt(overviewData.phong_trong),
+        doanh_thu_thang: parseFloat(overviewData.doanh_thu_thang),
+        lich_xem_hom_nay: overviewData.lich_xem_hom_nay // Đã là 1 array sẵn
       },
     });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
 });
-
 export default router;

@@ -6,6 +6,7 @@ import {
   FileText,
   Clock,
 } from "lucide-react";
+import {hopDongApi, thanhToanApi} from "../../services/api";
 
 interface ReturnRequest {
   id: number;
@@ -50,10 +51,14 @@ export function RoomReturnProcess() {
       try {
         setIsLoading(true);
         setError(null);
-        const response = await fetch("/api/hop-dong/return-ready");
-        if (!response.ok) throw new Error("Không thể tải danh sách hoàn trả");
-        const data = await response.json();
-        setReturnRequests(data.data || []);
+        const response = await hopDongApi.getReadyForReturn();
+        // const response = await fetch("/api/hop-dong/return-ready");
+        // thêm token vào request 
+        // response.headers.set("Authorization", `Bearer ${localStorage.getItem("token")}`);
+        // if (!response.ok) throw new Error("Không thể tải danh sách hoàn trả");
+        console.log("Return-ready contracts fetched:", response);
+        // const data = await response.json();
+        setReturnRequests(response || []);
       } catch (err: any) {
         setError(err.message);
         console.error("Error loading return-ready contracts:", err);
@@ -82,19 +87,15 @@ export function RoomReturnProcess() {
         setSelectedReturnDetails((prev) => ({ ...prev, loading: true }));
 
         // Check unpaid invoices (for A1 handling)
-        const paymentResponse = await fetch(
-          `/api/thanh-toan/contract/${selectedReturn.id}/unpaid`,
-        );
-        const paymentData = await paymentResponse.json();
-        const hasUnpaidInvoices = paymentData.hasUnpaid || false;
+        const paymentResponse = await thanhToanApi.fetchUnpaid(selectedReturn.id);
 
         // For now, assume room report exists if they've prepared to return
         // In production, would fetch from database
         const hasRoomReport = true;
-
+        console.log("paymentResponse:", paymentResponse);
         setSelectedReturnDetails({
           contractInfo: selectedReturn,
-          hasUnpaidInvoices,
+          hasUnpaidInvoices: paymentResponse.length > 0,
           hasRoomReport,
           loading: false,
         });
@@ -153,18 +154,11 @@ export function RoomReturnProcess() {
     // Main flow - proceed with return (Steps 5-7)
     setIsProcessing(true);
     try {
-      const response = await fetch(
-        `/api/hop-dong/${selectedReturn.id}/room-return`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ roomReportNotes: reportNotes }),
-        },
-      );
+      const response = await hopDongApi.roomReturn(selectedReturn.ma_hop_dong);
 
-      if (!response.ok) throw new Error("Lỗi khi xử lý hoàn trả phòng");
+      // if (!response.ok) throw new Error("Lỗi khi xử lý hoàn trả phòng");
 
-      const result = await response.json();
+      // const result = await response.json();
       alert("Hoàn trả phòng thành công!");
 
       // Reset and reload data
@@ -178,10 +172,11 @@ export function RoomReturnProcess() {
       setReportNotes("");
 
       // Reload return-ready list
-      const listResponse = await fetch("/api/hop-dong/return-ready");
-      if (listResponse.ok) {
-        const listData = await listResponse.json();
-        setReturnRequests(listData.data || []);
+      const listResponse = await hopDongApi.getReadyForReturn();
+      if (listResponse.length > 0) {
+        setReturnRequests(listResponse);
+      }else {
+        setReturnRequests([]);
       }
     } catch (err: any) {
       alert(`Lỗi: ${err.message}`);
@@ -251,14 +246,14 @@ export function RoomReturnProcess() {
                     </div>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-xs text-slate-500">
-                        HĐ: {request.ma_hd}
+                        HĐ: {request.ma_hop_dong}
                       </span>
                       <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700">
                         Sẵn sàng
                       </span>
                     </div>
                     <div className="text-xs text-slate-600">
-                      Lưu trú từ {request.ngay_bat_dau}
+                      Lưu trú từ { new Date(request.ngay_bat_dau).toLocaleDateString()}
                     </div>
                   </button>
                 ))}
@@ -296,19 +291,19 @@ export function RoomReturnProcess() {
                   <div>
                     <span className="text-slate-600">Phòng</span>
                     <p className="font-medium text-slate-900 mt-1">
-                      {selectedReturn.ma_phong}
+                      {selectedReturn.phong}
                     </p>
                   </div>
                   <div>
                     <span className="text-slate-600">Mã hợp đồng</span>
                     <p className="font-medium text-slate-900 mt-1">
-                      {selectedReturn.ma_hd}
+                      {selectedReturn.ma_hop_dong}
                     </p>
                   </div>
                   <div>
                     <span className="text-slate-600">Trạng thái HĐ</span>
                     <p className="font-medium text-blue-600 mt-1">
-                      {selectedReturn.trang_thai}
+                      {selectedReturn.trang_thai_hd}
                     </p>
                   </div>
                   <div>
@@ -320,7 +315,7 @@ export function RoomReturnProcess() {
                   <div>
                     <span className="text-slate-600">Ngày bắt đầu</span>
                     <p className="font-medium text-slate-900 mt-1">
-                      {selectedReturn.ngay_bat_dau}
+                      { new Date(selectedReturn.ngay_bat_dau).toLocaleDateString()}
                     </p>
                   </div>
                 </div>

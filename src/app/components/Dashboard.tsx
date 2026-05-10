@@ -181,17 +181,14 @@ export function Dashboard() {
                 >
                   <div className="min-w-[72px] rounded-2xl bg-[#1f63ff] px-3 py-2 text-center text-white">
                     <p className="text-sm font-bold">
-                      {new Date(apt.thoi_gian).toLocaleTimeString("vi-VN", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {apt.gio_xem}
                     </p>
                   </div>
                   <div className="flex-1">
                     <p className="font-semibold text-[#132238]">
-                      {apt.ten_khach}
+                      {apt.khach_hang}
                     </p>
-                    <p className="text-sm text-slate-600">{apt.phone_khach}</p>
+                    <p className="text-sm text-slate-600">{apt.sdt}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-semibold text-[#132238]">

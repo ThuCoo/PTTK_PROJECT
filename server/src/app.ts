@@ -14,6 +14,7 @@ import thanhToanRoutes from "./routes/thanhToan.routes";
 import dashboardRoutes from "./routes/dashboard.routes";
 import dangKyThueRoutes from "./routes/dangKyThue.routes";
 import datcoc from "./routes/datCoc.routes";
+import phieuDangKyRoutes from "./routes/phieuDangKy.routes";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -38,6 +39,8 @@ app.use("/api/hop-dong", hopDongRoutes);
 app.use("/api/thanh-toan", thanhToanRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/dang-ky-thue", dangKyThueRoutes);
+app.use("/api/phieu-dang-ky", phieuDangKyRoutes);
+
 
 // Health check
 app.get("/api/health", (_req, res) => {

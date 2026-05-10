@@ -177,7 +177,7 @@ export async function findPhongPhuHop(maPhieuDK: string): Promise<any[]> {
       p.ma_phong as maphong,
       p.loai_phong as loaiphong,
       p.suc_chua_toi_da as succhuatoida,
-      p.gia_thue_phong as giatheuphong,
+      p.gia_thue_phong as giathuephong,
       p.trang_thai as trangthai,
       p.khu_vuc as khuvuc,
       p.gioi_tinh_ap_dung as gioitinhapdung,
@@ -186,7 +186,7 @@ export async function findPhongPhuHop(maPhieuDK: string): Promise<any[]> {
       COUNT(g.ma_giuong) FILTER (WHERE g.ma_giuong IS NOT NULL AND g.trang_thai = 'Trống') as giuong_trong
     FROM phong p
     LEFT JOIN giuong g ON p.ma_phong = g.ma_phong
-    WHERE p.gioi_tinh_ap_dung = $1 AND p.trang_thai = 'Còn trống'
+    WHERE p.gioi_tinh_ap_dung = $1 AND p.trang_thai = 'Còn giường'
   `;
   
   const params: any[] = [gioitinh];
@@ -268,7 +268,7 @@ export async function updateAssignedBeds(
 
     // Return phòng cập nhật
     const result = await query(
-      `SELECT ma_phong as maphong, loai_phong as loaiphong, suc_chua_toi_da as succhuatoida, gia_thue_phong as giatheuphong, trang_thai as trangthai, khu_vuc as khuvuc, gioi_tinh_ap_dung as gioitinhapdung, ma_chi_nhanh as machinhnanh FROM phong WHERE ma_phong = $1`,
+      `SELECT ma_phong as maphong, loai_phong as loaiphong, suc_chua_toi_da as succhuatoida, gia_thue_phong as giathuephong, trang_thai as trangthai, khu_vuc as khuvuc, gioi_tinh_ap_dung as gioitinhapdung, ma_chi_nhanh as machinhnanh FROM phong WHERE ma_phong = $1`,
       [maPhong]
     );
 

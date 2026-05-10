@@ -211,7 +211,7 @@ export async function getAllPhieuDangKy(): Promise<any[]> {
              k.ho_ten as ten_khach, k.sdt as phone_khach
       FROM phieu_dang_ky pdk
       LEFT JOIN khach_hang k ON pdk.ma_khach_hang = k.ma_khach_hang
-      WHERE pdk.trang_thai = 'Đã chọn phòng' OR pdk.trang_thai = 'Mới' OR pdk.trang_thai IS NULL
+      WHERE pdk.trang_thai = 'Đã chọn phòng' OR pdk.trang_thai = 'Xác nhận nội quy' OR pdk.trang_thai IS NULL
       ORDER BY pdk.ngay_lap DESC
     `);
     return result.rows;

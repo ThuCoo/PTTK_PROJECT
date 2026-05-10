@@ -140,6 +140,8 @@ export const hopDongApi = {
   getOrCreate: (depositCode: string) => api.post('/hop-dong/get-or-create', { depositCode }).then(r => r.data.data),
   confirm: (contractId: string) => api.post(`/hop-dong/${contractId}/confirm`).then(r => r.data),
   cancel: (contractId: string) => api.post(`/hop-dong/${contractId}/cancel`).then(r => r.data),
+  getReadyForReturn: () => api.get('/hop-dong/return-ready').then(r => r.data.data),
+  roomReturn: (contractId: string) => api.post(`/hop-dong/${contractId}/room-return`).then(r => r.data.data),
 };
 
 // ─── Payments ────────────────────────────────────────────────────────────────
@@ -152,4 +154,22 @@ export const thanhToanApi = {
   create: (data: any) => api.post("/thanh-toan", data).then((r) => r.data.data),
   pay: (id: number, phuong_thuc: string) =>
     api.post(`/thanh-toan/${id}/pay`, { phuong_thuc }).then((r) => r.data),
+  fetchUnpaid: (contractId: number) =>
+    api.get(`/thanh-toan/contract/${contractId}/unpaid`).then((r) => r.data.data),
+};
+// ─── Phieu Dang Ky (Registrations Verification) ──────────────────────────────
+export const phieuDangKyApi = {
+  // Lấy danh sách các phiếu đang chờ rà soát
+  getPendingVerification: () => 
+    api.get('/phieu-dang-ky/pending-verification').then(r => r.data.data),
+    
+  // Cập nhật trạng thái của phiếu (Chuyển bước)
+  updateStatus: (id: string, trang_thai: string, ghi_chu?: string) =>
+    api.patch(`/phieu-dang-ky/${id}/status`, { trang_thai, ghi_chu }).then(r => r.data),
+    
+  // Báo cáo phòng/giường lỗi -> Hủy gán phòng và bắt chọn lại
+  rejectAssignedRoom: (id: string, ghi_chu: string) =>
+    api.post(`/phieu-dang-ky/${id}/reject-room`, { ghi_chu }).then(r => r.data),
+  completeVerification: (id: string) =>
+    api.post(`/phieu-dang-ky/${id}/complete-verification`).then(r => r.data),
 };

@@ -77,9 +77,17 @@ export async function getById(id: string) {
      WHERE pg.ma_phieu_dk = $1`, 
     [id]
   );
+  const beds2Result = await query(
+    `SELECT p.ma_phong as room , g.ma_giuong as magiuong
+     FROM phieu_dang_ky_phong pp
+     JOIN phong p ON pp.ma_phong = p.ma_phong
+     JOIN giuong g ON p.ma_phong = g.ma_phong
+     WHERE pp.ma_phieu_dk = $1`, 
+    [id]
+  );
   console.log('bed da chon ', bedsResult)
   // Đính kèm vào kết quả trả về Frontend
-  row.assignedRooms = bedsResult.rows; 
+  row.assignedRooms = [...bedsResult.rows, ...beds2Result.rows]; 
   
   return mapPhieuDangKyToFrontend(row);
 }

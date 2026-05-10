@@ -1,6 +1,6 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response } from "express";
 import * as KhachHangBUS from '../bus/khachHang.bus';
-import { authMiddleware } from '../middleware/auth';
+import { authMiddleware, requireSales } from '../middleware/auth';
 
 const router = Router();
 router.use(authMiddleware);
@@ -24,7 +24,7 @@ router.get('/:id', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', requireSales, async (req: Request, res: Response) => {
   try {
     const data = await KhachHangBUS.create(req.body);
     res.status(201).json({ success: true, data });
@@ -33,7 +33,7 @@ router.post('/', async (req: Request, res: Response) => {
   }
 });
 
-router.put('/:id', async (req: Request, res: Response) => {
+router.put('/:id', requireSales, async (req: Request, res: Response) => {
   try {
     const data = await KhachHangBUS.update(req.params.id, req.body);
     res.json({ success: true, data });

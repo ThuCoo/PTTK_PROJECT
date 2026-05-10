@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import * as ThanhToanBUS from "../bus/thanhToan.bus";
-import { authMiddleware } from "../middleware/auth";
+import { authMiddleware, requireAccountant } from "../middleware/auth";
 
 const router = Router();
 router.use(authMiddleware);
@@ -36,7 +36,7 @@ router.get("/:id", async (req: Request, res: Response) => {
   }
 });
 
-router.post("/", async (req: Request, res: Response) => {
+router.post("/", requireAccountant, async (req: Request, res: Response) => {
   try {
     const data = await ThanhToanBUS.create(req.body);
     res.status(201).json({ success: true, data });
@@ -45,7 +45,7 @@ router.post("/", async (req: Request, res: Response) => {
   }
 });
 
-router.post("/:id/pay", async (req: Request, res: Response) => {
+router.post("/:id/pay", requireAccountant, async (req: Request, res: Response) => {
   try {
     const { phuong_thuc } = req.body;
     await ThanhToanBUS.markPaid(req.params.id, phuong_thuc);

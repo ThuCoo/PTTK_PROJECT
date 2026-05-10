@@ -1,11 +1,11 @@
 import { Router, Request, Response } from "express";
 import * as HopDongBUS from "../bus/hopDong.bus";
-import { authMiddleware, requireQl } from "../middleware/auth";
+import { authMiddleware, requireManager, requireOfficer, requireSales } from "../middleware/auth";
 
 const router = Router();
 router.use(authMiddleware);
 
-router.get("/return-ready", async (_req: Request, res: Response) => {
+router.get("/return-ready", requireSales, async (_req: Request, res: Response) => {
   try {
     const data = await HopDongBUS.getReturnReady();
     res.json({ success: true, data });
@@ -45,7 +45,7 @@ router.get("/:id", async (req: Request, res: Response) => {
   }
 });
 
-router.post("/", async (req: Request, res: Response) => {
+router.post("/", requireOfficer, async (req: Request, res: Response) => {
   try {
     const data = await HopDongBUS.create(req.body);
     res.status(201).json({ success: true, data });
@@ -54,7 +54,7 @@ router.post("/", async (req: Request, res: Response) => {
   }
 });
 
-router.post("/:id/sign", async (req: Request, res: Response) => {
+router.post("/:id/sign", requireOfficer, async (req: Request, res: Response) => {
   try {
     await HopDongBUS.sign(req.params.id);
     res.json({ success: true, message: "Hợp đồng đã ký thành công" });
@@ -65,7 +65,7 @@ router.post("/:id/sign", async (req: Request, res: Response) => {
 
 router.post(
   "/:id/terminate",
-  requireQl,
+  requireManager,
   async (req: Request, res: Response) => {
     try {
       await HopDongBUS.terminate(req.params.id as any);
@@ -76,7 +76,7 @@ router.post(
   },
 );
 
-router.post("/:id/room-return", async (req: Request, res: Response) => {
+router.post("/:id/room-return", requireManager, async (req: Request, res: Response) => {
   try {
     const { roomReportNotes } = req.body;
     const result = await HopDongBUS.roomReturn(req.params.id, roomReportNotes);

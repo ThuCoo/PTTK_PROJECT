@@ -28,10 +28,40 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction):
   }
 }
 
-/** Only allow quan_ly role */
-export function requireQl(req: Request, res: Response, next: NextFunction): void {
+/** Only allow 'quan_ly' role */
+export function requireManager(req: Request, res: Response, next: NextFunction): void {
   if (req.user?.role !== 'quan_ly') {
     res.status(403).json({ success: false, error: 'Chỉ Quản lý mới có quyền thực hiện' });
+    return;
+  }
+  next();
+}
+
+/** Only allow 'sale' role */
+export function requireSales(req: Request, res: Response, next: NextFunction): void {
+  const role = req.user?.role as any;
+  if (role !== 'nv_sale' && role !== 'sale') {
+    res.status(403).json({ success: false, error: 'Chỉ nhân viên Sales mới có quyền thực hiện' });
+    return;
+  }
+  next();
+}
+
+/** Only allow 'phu_trach' role */
+export function requireOfficer(req: Request, res: Response, next: NextFunction): void {
+  const role = req.user?.role as any;
+  if (role !== 'nv_phu_trach' && role !== 'phu_trach') {
+    res.status(403).json({ success: false, error: 'Chỉ nhân viên Phụ trách mới có quyền thực hiện' });
+    return;
+  }
+  next();
+}
+
+/** Only allow 'ke_toan' role */
+export function requireAccountant(req: Request, res: Response, next: NextFunction): void {
+  const role = req.user?.role as any;
+  if (role !== 'nv_ke_toan' && role !== 'ke_toan') {
+    res.status(403).json({ success: false, error: 'Chỉ nhân viên Kế toán mới có quyền thực hiện' });
     return;
   }
   next();

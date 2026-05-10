@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import * as AuthBUS from '../bus/auth.bus';
-import { authMiddleware, requireQl } from '../middleware/auth';
+import { authMiddleware, requireManager } from '../middleware/auth';
 
 const router = Router();
 
@@ -15,6 +15,7 @@ router.post('/login', async (req: Request, res: Response) => {
     const result = await AuthBUS.login(username, password);
     res.json({ success: true, data: result });
   } catch (err: any) {
+    console.error('[Login Error]:', err);
     res.status(401).json({ success: false, error: err.message });
   }
 });
@@ -30,7 +31,7 @@ router.get('/me', authMiddleware, async (req: Request, res: Response) => {
 });
 
 // POST /api/auth/users (quan_ly only)
-router.post('/users', authMiddleware, requireQl, async (req: Request, res: Response) => {
+router.post('/users', authMiddleware, requireManager, async (req: Request, res: Response) => {
   try {
     const { username, password, ho_ten, role, email } = req.body;
     const user = await AuthBUS.createUser(username, password, ho_ten, role, email);
@@ -41,7 +42,7 @@ router.post('/users', authMiddleware, requireQl, async (req: Request, res: Respo
 });
 
 // GET /api/auth/users (quan_ly only)
-router.get('/users', authMiddleware, requireQl, async (_req: Request, res: Response) => {
+router.get('/users', authMiddleware, requireManager, async (_req: Request, res: Response) => {
   try {
     const users = await AuthBUS.getAllUsers();
     res.json({ success: true, data: users });

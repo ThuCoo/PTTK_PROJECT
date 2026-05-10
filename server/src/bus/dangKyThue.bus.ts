@@ -117,7 +117,7 @@ export async function validateCustomerConditions(
     customer_id: customerId,
     customer_name: customer.ho_ten,
     room_id: roomId,
-    conditions_checked: conditionCheck.conditions,
+    conditions: conditionCheck.conditions,
     all_conditions_met: conditionCheck.all_passed,
   };
 }
@@ -221,7 +221,7 @@ export async function confirmReview(
  * Mark form as invalid and record reason
  */
 export async function handleValidationFailure(
-  phieuDangKyId: number,
+  phieuDangKyId: string | any,
   reason: string,
 ) {
   try {
@@ -243,8 +243,8 @@ export async function handleValidationFailure(
  * Orchestrates all 6 steps + error handling
  */
 export async function completeReview(
-  phieuDangKyId: number,
-  selectedRoomId: number,
+  phieuDangKyId: string | any,
+  selectedRoomId: string | any,
 ) {
   try {
     // Step 2: Get form details

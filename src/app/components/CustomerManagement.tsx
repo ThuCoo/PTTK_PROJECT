@@ -19,7 +19,7 @@ import { khachHangApi } from "../../services/api";
 
 const EMPTY_FORM = {
   ho_ten: "",
-  phone: "",
+  sdt: "",
   email: "",
   cccd: "",
   gioi_tinh: "Nam" as "Nam" | "Nữ",
@@ -102,7 +102,7 @@ export function CustomerManagement() {
   const openEdit = (kh: any) => {
     setForm({
       ho_ten: kh.ho_ten,
-      phone: kh.phone,
+      sdt: kh.sdt || kh.phone || "",
       email: kh.email ?? "",
       cccd: kh.cccd ?? "",
       gioi_tinh: kh.gioi_tinh,
@@ -129,7 +129,7 @@ export function CustomerManagement() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setFormError("");
-    if (!form.ho_ten.trim() || !form.phone.trim()) {
+    if (!form.ho_ten.trim() || !form.sdt.trim()) {
       setFormError("Họ tên và số điện thoại là bắt buộc");
       return;
     }
@@ -271,7 +271,7 @@ export function CustomerManagement() {
                     <div className="space-y-2 text-[15px] text-slate-700">
                       <div className="flex items-center gap-2">
                         <Phone className="h-4 w-4 text-slate-500" />
-                        {kh.phone}
+                        {kh.sdt || kh.phone || "—"}
                       </div>
                       <div className="flex items-center gap-2">
                         <Mail className="h-4 w-4 text-slate-500" />
@@ -373,7 +373,7 @@ export function CustomerManagement() {
                     type: "text",
                     colSpan: 2,
                   },
-                  { label: "Số điện thoại *", key: "phone", type: "tel" },
+                  { label: "Số điện thoại *", key: "sdt", type: "tel" },
                   { label: "Email", key: "email", type: "email" },
                   { label: "CCCD", key: "cccd", type: "text" },
                   { label: "Số người", key: "so_nguoi", type: "number" },

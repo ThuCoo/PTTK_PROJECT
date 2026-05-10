@@ -107,11 +107,26 @@ export function Login() {
 
           {/* Demo credentials */}
           <div className="mt-6 p-4 bg-white/5 border border-white/10 rounded-xl">
-            <p className="text-xs text-blue-300 font-medium mb-2">Tài khoản demo:</p>
-            <div className="space-y-1 text-xs text-blue-200/70">
-              <p>👨‍💼 Quản lý: <span className="text-white font-mono">admin</span> / <span className="text-white font-mono">password123</span></p>
-              <p>👤 Nhân viên: <span className="text-white font-mono">nhanvien</span> / <span className="text-white font-mono">password123</span></p>
+            <p className="text-xs text-blue-300 font-medium mb-2">Tài khoản demo (Nhấn để điền):</p>
+            <div className="grid grid-cols-2 gap-2 text-[11px]">
+              {[
+                { label: '👨‍💼 Quản lý', user: 'admin' },
+                { label: '💰 Sales', user: 'sales_user' },
+                { label: '📄 Phụ trách', user: 'officer_user' },
+                { label: '🧾 Kế toán', user: 'accountant_user' },
+              ].map(demo => (
+                <button
+                  key={demo.user}
+                  type="button"
+                  onClick={() => setForm({ username: demo.user, password: 'password123' })}
+                  className="text-left px-2 py-1.5 rounded-lg hover:bg-white/10 transition-colors border border-white/5"
+                >
+                  <p className="text-blue-200/70">{demo.label}</p>
+                  <p className="text-white font-mono mt-0.5">{demo.user}</p>
+                </button>
+              ))}
             </div>
+            <p className="mt-3 text-[10px] text-blue-300/40 text-center uppercase tracking-widest">Mật khẩu chung: password123</p>
           </div>
         </div>
       </div>

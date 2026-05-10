@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import * as DatCocBUS from "../bus/datCoc.bus";
-import { authMiddleware, requireQl } from "../middleware/auth";
+import { authMiddleware, requireManager } from "../middleware/auth";
 import { upload } from "../middleware/upload";
 
 const router = Router();
@@ -103,7 +103,7 @@ router.post(
 );
 
 // Confirm deposit (quan_ly only)
-router.post("/:id/confirm", requireQl, async (req: Request, res: Response) => {
+router.post("/:id/confirm", requireManager, async (req: Request, res: Response) => {
   try {
     const nguoiXacNhan = `${req.user!.role === "quan_ly" ? "Quản lý" : "NV"} - ${req.user!.username}`;
     await DatCocBUS.confirm(req.params.id, nguoiXacNhan);
@@ -114,7 +114,7 @@ router.post("/:id/confirm", requireQl, async (req: Request, res: Response) => {
 });
 
 // Reject deposit proof (quan_ly only)
-router.post("/:id/reject", requireQl, async (req: Request, res: Response) => {
+router.post("/:id/reject", requireManager, async (req: Request, res: Response) => {
   try {
     await DatCocBUS.reject(req.params.id, req.body.ghi_chu || "");
     res.json({
@@ -126,7 +126,7 @@ router.post("/:id/reject", requireQl, async (req: Request, res: Response) => {
   }
 });
 
-router.post("/:id/refund", requireQl, async (req: Request, res: Response) => {
+router.post("/:id/refund", requireManager, async (req: Request, res: Response) => {
   try {
     await DatCocBUS.refund(
       parseInt(req.params.id),

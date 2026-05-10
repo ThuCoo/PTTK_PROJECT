@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import * as DangKyThueBUS from "../bus/dangKyThue.bus";
-import { authMiddleware } from "../middleware/auth";
+import { authMiddleware, requireManager, requireSales } from "../middleware/auth";
 
 const router = Router();
 router.use(authMiddleware);
@@ -9,7 +9,12 @@ router.use(authMiddleware);
  * Step 1: Get list of pending rental registration forms for review
  * GET /api/dang-ky-thue/pending
  */
-router.get("/pending", async (_req: Request, res: Response) => {
+// Both Sales and Manager need to see pending forms to process them
+router.get("/pending", async (req: Request, res: Response) => {
+  const role = (req as any).user?.role;
+  if (role !== 'nv_sale' && role !== 'sale' && role !== 'quan_ly') {
+    return res.status(403).json({ success: false, error: 'Không có quyền truy cập danh sách phiếu đăng ký' });
+  }
   try {
     const pendingForms = await DangKyThueBUS.getPendingForReview();
     res.json({
@@ -30,7 +35,12 @@ router.get("/pending", async (_req: Request, res: Response) => {
  * Step 2: Get rental registration form details
  * GET /api/dang-ky-thue/:id
  */
+// Both Sales and Manager need to see form details
 router.get("/:id", async (req: Request, res: Response) => {
+  const role = (req as any).user?.role;
+  if (role !== 'nv_sale' && role !== 'sale' && role !== 'quan_ly') {
+    return res.status(403).json({ success: false, error: 'Không có quyền truy cập chi tiết phiếu đăng ký' });
+  }
   try {
     const phieuDangKyId = req.params.id;
     const formDetails = await DangKyThueBUS.getFormDetails(phieuDangKyId);
@@ -58,7 +68,7 @@ router.get("/:id", async (req: Request, res: Response) => {
  * - 200: Conditions are valid
  * - 400: A3 - Thông tin không hợp lệ
  */
-router.post("/:id/validate-conditions", async (req: Request, res: Response) => {
+router.post("/:id/validate-conditions", requireManager, async (req: Request, res: Response) => {
   try {
     const phieuDangKyId = req.params.id;
     const { room_id, khach_hang_id } = req.body;
@@ -118,7 +128,7 @@ router.post("/:id/validate-conditions", async (req: Request, res: Response) => {
  * - 200: Room is available
  * - 400: A4 - Phòng không khả dụng
  */
-router.post("/:id/check-room/:roomId", async (req: Request, res: Response) => {
+router.post("/:id/check-room/:roomId", requireManager, async (req: Request, res: Response) => {
   try {
     const roomId = req.params.roomId;
 
@@ -161,7 +171,7 @@ router.post("/:id/check-room/:roomId", async (req: Request, res: Response) => {
  * - 200: Review confirmed and recorded
  * - 400: A5 - Lỗi hệ thống
  */
-router.post("/:id/confirm-review", async (req: Request, res: Response) => {
+router.post("/:id/confirm-review", requireSales, async (req: Request, res: Response) => {
   try {
     const phieuDangKyId = req.params.id;
     const { room_id, ghi_chu } = req.body;
@@ -213,7 +223,7 @@ router.post("/:id/confirm-review", async (req: Request, res: Response) => {
  *
  * Returns all steps results or appropriate error
  */
-router.post("/:id/complete-review", async (req: Request, res: Response) => {
+router.post("/:id/complete-review", requireSales, async (req: Request, res: Response) => {
   try {
     const phieuDangKyId = req.params.id;
     const { room_id } = req.body;
